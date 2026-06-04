@@ -219,6 +219,43 @@ function useNewsBriefs() {
   return newsState;
 }
 
+function usePwaInstall() {
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    setIsStandalone(standalone);
+
+    function handleBeforeInstallPrompt(event) {
+      event.preventDefault();
+      setInstallPrompt(event);
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', () => {
+      setInstallPrompt(null);
+      setIsStandalone(true);
+    });
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  async function installApp() {
+    if (!installPrompt) return false;
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === 'accepted') setInstallPrompt(null);
+    return choice.outcome === 'accepted';
+  }
+
+  return {
+    canInstall: Boolean(installPrompt),
+    isStandalone,
+    installApp
+  };
+}
+
 function usePersistentState(key, fallbackValue) {
   const [value, setValue] = useState(() => {
     try {
@@ -278,6 +315,13 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [lastAction, setLastAction] = useState('準備開始');
   const newsState = useNewsBriefs();
+
+  useEffect(() => {
+    const requestedView = new URLSearchParams(window.location.search).get('view');
+    if (requestedView && navItems.some((item) => item.id === requestedView)) {
+      setActiveView(requestedView);
+    }
+  }, [setActiveView]);
 
   const visibleTasks = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -863,6 +907,8 @@ function NewsWorkspace({ newsState }) {
 }
 
 function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
+  const pwaInstall = usePwaInstall();
+
   function updateConfig(field, value) {
     setNotionConfig((current) => ({ ...current, [field]: value }));
   }
@@ -870,6 +916,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
   return (
     <section className="panel notionWorkspace">
       <div className="panelTitle"><h2>連線設定</h2><span>本機保存</span></div>
+      <PwaInstallCard pwaInstall={pwaInstall} />
       <div className="notionSetup">
         <label><span>Notion 網頁</span><input value={notionConfig.workspaceUrl} onChange={(event) => updateConfig('workspaceUrl', event.target.value)} placeholder="https://www.notion.so/..." /></label>
         <label><span>API Token Key</span><input value={notionConfig.token} onChange={(event) => updateConfig('token', event.target.value)} placeholder="secret_..." type="password" /></label>
@@ -881,6 +928,27 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
         <button className="secondaryAction" onClick={resetDemoData}><RotateCcw size={17} />重置示範資料</button>
       </div>
     </section>
+  );
+}
+
+function PwaInstallCard({ pwaInstall }) {
+  const status = pwaInstall.isStandalone ? '已用 App 模式開啟' : '可加入主畫面';
+
+  return (
+    <div className="pwaInstallCard">
+      <div>
+        <span>{status}</span>
+        <strong>Vic Workbench App</strong>
+        <p>安裝後會像 App 一樣從主畫面開啟，支援離線開啟基本介面，新聞與 Notion 同步仍需要網路。</p>
+      </div>
+      <button className="primaryAction" onClick={pwaInstall.installApp} disabled={!pwaInstall.canInstall || pwaInstall.isStandalone}>
+        <Download size={17} />
+        {pwaInstall.isStandalone ? '已安裝' : pwaInstall.canInstall ? '安裝 App' : '用瀏覽器加入主畫面'}
+      </button>
+      <div className="pwaHint">
+        iPhone：Safari 開啟網站 → 分享 → 加入主畫面。Android/Chrome：可使用網址列或本按鈕安裝。
+      </div>
+    </div>
   );
 }
 

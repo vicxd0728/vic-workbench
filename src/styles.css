@@ -555,6 +555,58 @@ a {
   justify-content: flex-end;
 }
 
+.pwaInstallCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(20, 184, 166, 0.06)),
+    rgba(8, 17, 32, 0.74);
+}
+
+.pwaInstallCard span,
+.pwaInstallCard p,
+.pwaHint {
+  color: #9fb2cc;
+}
+
+.pwaInstallCard span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.pwaInstallCard strong {
+  display: block;
+  color: #f8fbff;
+  font-size: 18px;
+}
+
+.pwaInstallCard p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pwaInstallCard button:disabled {
+  cursor: default;
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.pwaHint {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid rgba(125, 211, 252, 0.14);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .dailyScore {
   aspect-ratio: 1;
   display: grid;
@@ -1840,6 +1892,10 @@ body {
   .newsGrid,
   .databaseCards,
   .notionDashboardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pwaInstallCard {
     grid-template-columns: 1fr;
   }
 

@@ -1,0 +1,50 @@
+{
+  "name": "Vic Workbench",
+  "short_name": "Workbench",
+  "description": "Vic 的個人工作中控台：任務、Notion、新聞情報與語音筆記。",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "business", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "收件匣",
+      "short_name": "收件匣",
+      "description": "快速新增任務、筆記、連結或語音重點。",
+      "url": "/?view=inbox",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Notion / 知識庫",
+      "short_name": "Notion",
+      "description": "查看 Notion 多資料庫摘要。",
+      "url": "/?view=knowledge",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
