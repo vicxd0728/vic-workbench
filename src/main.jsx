@@ -1017,7 +1017,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       <div className="databaseSettingsHeader">
         <div>
           <strong>Notion 資料庫</strong>
-          <span>保留任務、知識庫、會議筆記，也可以新增父頁資料夾或自訂資料庫。</span>
+          <span>保留任務、知識庫、會議筆記，也可以改名、新增父頁資料夾或自訂資料庫。</span>
         </div>
         <button className="secondaryAction" onClick={addCustomDatabase}><Plus size={17} />新增資料庫</button>
       </div>
@@ -1034,7 +1034,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
               </div>
               <label>
                 <span>資料庫名稱</span>
-                <input value={config.label} onChange={(event) => updateDatabaseConfig(config.id, 'label', event.target.value)} disabled={config.locked} placeholder="資料庫名稱" />
+                <input value={config.label} onChange={(event) => updateDatabaseConfig(config.id, 'label', event.target.value)} placeholder="資料庫名稱" />
               </label>
               <label>
                 <span>用途說明</span>
