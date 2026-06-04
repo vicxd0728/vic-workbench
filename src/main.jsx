@@ -844,13 +844,14 @@ function NotionWorkspace({ notionConfig }) {
   const [activeDatabase, setActiveDatabase] = useState(defaultActive);
   const activeInfo = configuredDatabases.find((item) => item.id === activeDatabase) || configuredDatabases[0];
   const activeIsFolder = activeInfo?.sourceType === 'folder';
+  const activeLink = activeInfo?.pageUrl || (activeInfo?.databaseId?.startsWith('http') ? activeInfo.databaseId : '');
   const activeSortLabel = notionSortOptions.find((item) => item.value === activeInfo?.sortMode)?.label || '最近更新優先';
   const activeDetail = notionDatabaseDetails[activeDatabase] || {
     headline: activeIsFolder
       ? '這個父頁已設定，接上 Notion API 後會讀取子頁、排序，並摘要最新報告。'
       : activeInfo?.databaseId
         ? '這個自訂資料庫已設定，接上 Notion API 後會顯示摘要。'
-        : '尚未設定這個資料庫的 Database ID。',
+        : '尚未設定這個資料庫的 Notion 連結。',
     pending: 0,
     updatedAt: activeInfo?.databaseId || activeInfo?.pageUrl ? '已設定' : '尚未連接',
     items: []
@@ -918,12 +919,12 @@ function NotionWorkspace({ notionConfig }) {
           ))
         ) : (
           <div className="emptyState">
-            尚未載入 {activeInfo.label} 資料。到設定頁設定{activeIsFolder ? '父頁連結' : 'Database ID'}，接上 Notion API 後會顯示真摘要與原頁連結。
+            尚未載入 {activeInfo.label} 資料。到設定頁貼上{activeIsFolder ? '父頁連結' : '資料庫連結'}，接上 Notion API 後會顯示真摘要與原頁連結。
           </div>
         )}
       </div>
-      {activeInfo.pageUrl ? (
-        <a className="wideButton" href={activeInfo.pageUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} />開啟 {activeInfo.label} 看更多</a>
+      {activeLink ? (
+        <a className="wideButton" href={activeLink} target="_blank" rel="noreferrer"><ExternalLink size={16} />開啟 {activeInfo.label} 看更多</a>
       ) : (
         <button className="wideButton"><ExternalLink size={16} />尚未設定 {activeInfo.label} 連結</button>
       )}
@@ -1031,7 +1032,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
   }
 
   async function readNotionSource(config) {
-    const hasSource = config.sourceType === 'folder' ? Boolean(config.pageUrl) : Boolean(config.databaseId);
+    const hasSource = config.sourceType === 'folder' ? Boolean(config.pageUrl) : Boolean(config.databaseId || config.pageUrl);
     if (!hasToken || !hasSource) {
       setSourceRuns((current) => ({
         ...current,
@@ -1089,7 +1090,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
         <div>
           <span>2</span>
           <strong>設定資料來源</strong>
-          <p>每張卡只負責指定要讀 Database，或父頁底下的子頁。</p>
+          <p>每張卡只要貼 Notion 連結，程式會自己處理。</p>
         </div>
         <div>
           <span>3</span>
@@ -1112,7 +1113,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       <div className="databaseSettingsHeader">
         <div>
           <strong>Notion 資料來源</strong>
-          <span>下面不需要再填 Key，只要指定每個區塊要讀哪個 Database 或父頁。</span>
+          <span>下面不需要再填 Key，只要貼每個區塊要讀的 Notion 連結。</span>
         </div>
         <button className="secondaryAction" onClick={addCustomDatabase}><Plus size={17} />新增資料來源</button>
       </div>
@@ -1121,7 +1122,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
           const preset = notionDatabases.find((item) => item.id === config.id);
           const Icon = preset?.icon || BriefcaseBusiness;
           const runState = sourceRuns[config.id];
-          const hasSource = config.sourceType === 'folder' ? Boolean(config.pageUrl) : Boolean(config.databaseId);
+          const hasSource = config.sourceType === 'folder' ? Boolean(config.pageUrl) : Boolean(config.databaseId || config.pageUrl);
           return (
             <article key={config.id}>
               <div className="databaseSettingTitle">
@@ -1146,14 +1147,16 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
               </label>
               {(config.sourceType || 'database') === 'database' && (
                 <label>
-                  <span>Database ID</span>
-                  <input value={config.databaseId} onChange={(event) => updateDatabaseConfig(config.id, 'databaseId', event.target.value)} placeholder={`${config.label} database id`} />
+                  <span>資料庫連結</span>
+                  <input value={config.databaseId} onChange={(event) => updateDatabaseConfig(config.id, 'databaseId', event.target.value)} placeholder="直接貼 Notion database 連結" />
                 </label>
               )}
-              <label>
-                <span>{(config.sourceType || 'database') === 'folder' ? '父頁連結' : 'Notion 頁面 / 資料庫連結'}</span>
-                <input value={config.pageUrl} onChange={(event) => updateDatabaseConfig(config.id, 'pageUrl', event.target.value)} placeholder="https://www.notion.so/..." />
-              </label>
+              {(config.sourceType || 'database') === 'folder' && (
+                <label>
+                  <span>父頁連結</span>
+                  <input value={config.pageUrl} onChange={(event) => updateDatabaseConfig(config.id, 'pageUrl', event.target.value)} placeholder="直接貼 Notion 父頁連結" />
+                </label>
+              )}
               <div className="settingPair">
                 <label>
                   <span>排序方式</span>
@@ -1380,7 +1383,7 @@ function MiniSummary({ title, action, onClick, items }) {
         {items.length > 0 ? (
           items.map((item) => <article key={item.title}><strong>{item.title}</strong><p>{item.summary}</p></article>)
         ) : (
-          <article><strong>尚未連接 Notion</strong><p>到設定頁填入多個 Database ID 後，這裡會顯示真正摘要。</p></article>
+          <article><strong>尚未連接 Notion</strong><p>到設定頁貼上 Notion 資料來源連結後，這裡會顯示真正摘要。</p></article>
         )}
       </div>
     </section>

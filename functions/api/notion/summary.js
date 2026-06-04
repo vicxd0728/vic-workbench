@@ -8,7 +8,7 @@ function getPlainText(richText = []) {
   return richText.map((item) => item.plain_text || '').join('').trim();
 }
 
-function extractPageId(input = '') {
+function extractNotionId(input = '') {
   const compact = input.replace(/-/g, '');
   const match = compact.match(/([a-f0-9]{32})(?:[?#/]|$)/i);
   return match?.[1] || '';
@@ -79,12 +79,15 @@ async function getBlocksText(blockId, token) {
 }
 
 async function readDatabase(source, token) {
+  const databaseId = extractNotionId(source.databaseId || source.pageUrl || '');
+  if (!databaseId) throw new Error('資料庫連結無法解析，請貼 Notion database 連結。');
+
   const limit = Math.min(3, Math.max(1, Number(source.analysisLimit || 3)));
   const sorts = source.sortMode === 'updated'
     ? [{ timestamp: 'last_edited_time', direction: 'descending' }]
     : [];
 
-  const data = await notionFetch(`/databases/${source.databaseId}/query`, token, {
+  const data = await notionFetch(`/databases/${databaseId}/query`, token, {
     method: 'POST',
     body: JSON.stringify({ page_size: limit, sorts })
   });
@@ -106,8 +109,8 @@ async function readDatabase(source, token) {
 }
 
 async function readFolder(source, token) {
-  const pageId = extractPageId(source.pageUrl);
-  if (!pageId) throw new Error('父頁連結無法解析 Notion Page ID。');
+  const pageId = extractNotionId(source.pageUrl);
+  if (!pageId) throw new Error('父頁連結無法解析，請貼 Notion 父頁連結。');
 
   const limit = Math.min(3, Math.max(1, Number(source.analysisLimit || 3)));
   const data = await notionFetch(`/blocks/${pageId}/children?page_size=100`, token);
@@ -146,8 +149,8 @@ export async function onRequestPost({ request, env }) {
     const source = body.source || {};
 
     if (!token) return json({ ok: false, message: '請先填入上方共用 API Token Key。' }, 400);
-    if (source.sourceType === 'folder' && !source.pageUrl) return json({ ok: false, message: '父頁資料夾需要填入父頁連結。' }, 400);
-    if (source.sourceType !== 'folder' && !source.databaseId) return json({ ok: false, message: 'Database 模式需要填入 Database ID。' }, 400);
+    if (source.sourceType === 'folder' && !source.pageUrl) return json({ ok: false, message: '父頁資料夾請貼 Notion 父頁連結。' }, 400);
+    if (source.sourceType !== 'folder' && !source.databaseId && !source.pageUrl) return json({ ok: false, message: 'Database 模式請貼 Notion database 連結。' }, 400);
 
     const summaries = source.sourceType === 'folder'
       ? await readFolder(source, token)
