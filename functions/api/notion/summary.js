@@ -1,18 +1,166 @@
-export async function onRequestGet({ env }) {
-  const hasToken = Boolean(env.NOTION_TOKEN);
+const NOTION_VERSION = '2022-06-28';
 
-  return Response.json({
-    connected: hasToken,
-    message: hasToken
-      ? 'Notion token is configured. Implement database queries here.'
-      : 'NOTION_TOKEN is not configured yet.',
-    summaries: [
-      {
-        database: '知識庫',
-        title: 'Notion 摘要 API 骨架已就緒',
-        summary: '下一步設定 NOTION_TOKEN 與 database id，就能從 Worker 安全抓取資料。',
-        url: null
-      }
-    ]
+function json(data, status = 200) {
+  return Response.json(data, { status });
+}
+
+function getPlainText(richText = []) {
+  return richText.map((item) => item.plain_text || '').join('').trim();
+}
+
+function extractPageId(input = '') {
+  const compact = input.replace(/-/g, '');
+  const match = compact.match(/([a-f0-9]{32})(?:[?#/]|$)/i);
+  return match?.[1] || '';
+}
+
+function extractTitleFromProperties(properties = {}) {
+  const titleProperty = Object.values(properties).find((property) => property.type === 'title');
+  return getPlainText(titleProperty?.title || []) || '未命名頁面';
+}
+
+function getPageDate(title = '') {
+  const match = title.match(/(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (!match) return 0;
+  return new Date(`${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`).getTime();
+}
+
+function sortPages(pages, sortMode) {
+  if (sortMode === 'manual') return pages;
+  return [...pages].sort((a, b) => {
+    if (sortMode === 'title-date-desc') return getPageDate(b.title) - getPageDate(a.title);
+    return new Date(b.lastEditedTime || 0).getTime() - new Date(a.lastEditedTime || 0).getTime();
   });
+}
+
+function summarizeText(text) {
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+  if (!cleaned) return '這個頁面目前沒有可整理的文字內容。';
+  const sentences = cleaned.split(/[。！？!?；;\n]/).map((item) => item.trim()).filter(Boolean);
+  return sentences.slice(0, 3).join('。') + (sentences.length ? '。' : '');
+}
+
+function blockToText(block) {
+  const type = block.type;
+  const value = block[type];
+  if (!value) return '';
+
+  if (type === 'child_page') return value.title || '';
+  if (Array.isArray(value.rich_text)) return getPlainText(value.rich_text);
+  if (type === 'to_do') return getPlainText(value.rich_text);
+  if (type === 'bulleted_list_item' || type === 'numbered_list_item') return getPlainText(value.rich_text);
+  if (type === 'heading_1' || type === 'heading_2' || type === 'heading_3') return getPlainText(value.rich_text);
+  if (type === 'paragraph' || type === 'quote' || type === 'callout') return getPlainText(value.rich_text);
+  return '';
+}
+
+async function notionFetch(path, token, options = {}) {
+  const response = await fetch(`https://api.notion.com/v1${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Notion-Version': NOTION_VERSION,
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data.message || `Notion API HTTP ${response.status}`;
+    throw new Error(message);
+  }
+  return data;
+}
+
+async function getBlocksText(blockId, token) {
+  const data = await notionFetch(`/blocks/${blockId}/children?page_size=80`, token);
+  return (data.results || []).map(blockToText).filter(Boolean).join('\n');
+}
+
+async function readDatabase(source, token) {
+  const limit = Math.min(3, Math.max(1, Number(source.analysisLimit || 3)));
+  const sorts = source.sortMode === 'updated'
+    ? [{ timestamp: 'last_edited_time', direction: 'descending' }]
+    : [];
+
+  const data = await notionFetch(`/databases/${source.databaseId}/query`, token, {
+    method: 'POST',
+    body: JSON.stringify({ page_size: limit, sorts })
+  });
+
+  const pages = data.results || [];
+  const summaries = await Promise.all(pages.map(async (page) => {
+    const title = extractTitleFromProperties(page.properties);
+    const text = await getBlocksText(page.id, token);
+    return {
+      id: page.id,
+      title,
+      summary: summarizeText(text),
+      url: page.url,
+      lastEditedTime: page.last_edited_time
+    };
+  }));
+
+  return summaries;
+}
+
+async function readFolder(source, token) {
+  const pageId = extractPageId(source.pageUrl);
+  if (!pageId) throw new Error('父頁連結無法解析 Notion Page ID。');
+
+  const limit = Math.min(3, Math.max(1, Number(source.analysisLimit || 3)));
+  const data = await notionFetch(`/blocks/${pageId}/children?page_size=100`, token);
+  const childPages = (data.results || [])
+    .filter((block) => block.type === 'child_page')
+    .map((block) => ({
+      id: block.id,
+      title: block.child_page?.title || '未命名子頁',
+      url: `https://www.notion.so/${block.id.replace(/-/g, '')}`,
+      lastEditedTime: block.last_edited_time
+    }));
+
+  const selected = sortPages(childPages, source.sortMode).slice(0, limit);
+  return Promise.all(selected.map(async (page) => {
+    const text = await getBlocksText(page.id, token);
+    return {
+      ...page,
+      summary: summarizeText(text)
+    };
+  }));
+}
+
+export async function onRequestGet({ env }) {
+  return json({
+    connected: Boolean(env.NOTION_TOKEN),
+    message: env.NOTION_TOKEN
+      ? 'Notion token is configured on Cloudflare.'
+      : 'NOTION_TOKEN is not configured on Cloudflare. The app can still send a local token when testing a source.'
+  });
+}
+
+export async function onRequestPost({ request, env }) {
+  try {
+    const body = await request.json();
+    const token = env.NOTION_TOKEN || body.token;
+    const source = body.source || {};
+
+    if (!token) return json({ ok: false, message: '請先填入上方共用 API Token Key。' }, 400);
+    if (source.sourceType === 'folder' && !source.pageUrl) return json({ ok: false, message: '父頁資料夾需要填入父頁連結。' }, 400);
+    if (source.sourceType !== 'folder' && !source.databaseId) return json({ ok: false, message: 'Database 模式需要填入 Database ID。' }, 400);
+
+    const summaries = source.sourceType === 'folder'
+      ? await readFolder(source, token)
+      : await readDatabase(source, token);
+
+    return json({
+      ok: true,
+      sourceId: source.id,
+      sourceLabel: source.label,
+      count: summaries.length,
+      summaries
+    });
+  } catch (error) {
+    return json({ ok: false, message: error.message || 'Notion 讀取失敗。' }, 500);
+  }
 }

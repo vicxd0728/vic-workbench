@@ -898,6 +898,75 @@ a {
   gap: 10px;
 }
 
+.connectionGuide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.connectionGuide div {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 4px 9px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.42);
+}
+
+.connectionGuide span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  font-weight: 850;
+}
+
+.connectionGuide strong,
+.settingsSectionHeader strong {
+  color: #f8fbff;
+}
+
+.connectionGuide p {
+  margin: 0;
+  color: #9fb2cc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settingsSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.settingsSectionHeader div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settingsSectionHeader span {
+  color: #9fb2cc;
+  font-size: 13px;
+}
+
+.settingsSectionHeader small {
+  margin-left: auto;
+  padding: 5px 9px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 999px;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.08);
+  white-space: nowrap;
+}
+
 .notionSetup label {
   display: grid;
   gap: 7px;
@@ -1033,6 +1102,71 @@ a {
   color: #fde68a;
   font-size: 12px;
   line-height: 1.55;
+}
+
+.sourceRunState {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 9px;
+  background: rgba(6, 15, 28, 0.34);
+}
+
+.sourceRunState span {
+  display: block;
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sourceRunState p {
+  margin: 3px 0 0;
+  color: #9fb2cc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sourceRunState.ready {
+  border-color: rgba(20, 184, 166, 0.34);
+  background: rgba(20, 184, 166, 0.08);
+}
+
+.sourceRunState.error {
+  border-color: rgba(248, 113, 113, 0.34);
+  background: rgba(127, 29, 29, 0.14);
+}
+
+.sourceRunState button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.sourcePreviewList {
+  display: grid;
+  gap: 8px;
+}
+
+.sourcePreviewList a {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 9px;
+  background: rgba(6, 15, 28, 0.34);
+}
+
+.sourcePreviewList strong {
+  color: #e5f0ff;
+  font-size: 13px;
+}
+
+.sourcePreviewList span {
+  color: #9fb2cc;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .dangerButton {
@@ -2025,6 +2159,7 @@ body {
   }
 
   .notionSetup,
+  .connectionGuide,
   .databaseTabs,
   .newsGrid,
   .databaseCards,
@@ -2044,6 +2179,21 @@ body {
 
   .databaseSettingsHeader button {
     width: 100%;
+    margin-left: 0;
+  }
+
+  .settingsSectionHeader,
+  .sourceRunState {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .settingsSectionHeader {
+    display: grid;
+  }
+
+  .settingsSectionHeader small {
+    width: fit-content;
     margin-left: 0;
   }
 
