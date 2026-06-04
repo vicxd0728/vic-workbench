@@ -89,10 +89,9 @@ const initialNotes = [];
 const initialProjects = [];
 
 const notionDatabases = [
-  { id: 'tasks', label: '任務資料庫', icon: CheckSquare, count: 0, status: '尚未連接' },
-  { id: 'knowledge', label: '知識庫', icon: BookOpen, count: 0, status: '尚未連接' },
-  { id: 'clients', label: '客戶與專案', icon: BriefcaseBusiness, count: 0, status: '尚未連接' },
-  { id: 'meetings', label: '會議筆記', icon: Mic, count: 0, status: '尚未連接' }
+  { id: 'tasks', label: '任務資料庫', icon: CheckSquare, count: 0, status: '尚未連接', purpose: '任務同步、待辦與工作狀態' },
+  { id: 'knowledge', label: '知識庫', icon: BookOpen, count: 0, status: '尚未連接', purpose: '知識庫、SOP、技術筆記與決策紀錄' },
+  { id: 'meetings', label: '會議筆記', icon: Mic, count: 0, status: '尚未連接', purpose: '會議逐字稿、重點摘要與決議' }
 ];
 
 const notionHighlights = [
@@ -126,10 +125,9 @@ const notionDatabaseDetails = {
 };
 
 const defaultNotionDatabaseConfig = {
-  tasks: { databaseId: '', pageUrl: '', purpose: '任務同步、待辦與工作狀態' },
-  knowledge: { databaseId: '', pageUrl: '', purpose: '知識庫、SOP、技術筆記與決策紀錄' },
-  clients: { databaseId: '', pageUrl: '', purpose: '客戶、專案、報價與合作紀錄' },
-  meetings: { databaseId: '', pageUrl: '', purpose: '會議逐字稿、重點摘要與決議' }
+  tasks: { id: 'tasks', label: '任務資料庫', databaseId: '', pageUrl: '', purpose: '任務同步、待辦與工作狀態', locked: true },
+  knowledge: { id: 'knowledge', label: '知識庫', databaseId: '', pageUrl: '', purpose: '知識庫、SOP、技術筆記與決策紀錄', locked: true },
+  meetings: { id: 'meetings', label: '會議筆記', databaseId: '', pageUrl: '', purpose: '會議逐字稿、重點摘要與決議', locked: true }
 };
 
 const newsBriefs = [
@@ -255,6 +253,28 @@ function extractKeyPoints(text) {
   });
 
   return Array.from(new Set(sorted)).slice(0, 5);
+}
+
+function getConfiguredNotionDatabases(notionConfig) {
+  const configs = {
+    ...defaultNotionDatabaseConfig,
+    ...(notionConfig?.databases || {})
+  };
+
+  return Object.values(configs).map((config) => {
+    const preset = notionDatabases.find((item) => item.id === config.id);
+    return {
+      id: config.id,
+      label: config.label || preset?.label || '自訂資料庫',
+      icon: preset?.icon || BriefcaseBusiness,
+      count: 0,
+      status: config.databaseId ? '已設定' : '尚未連接',
+      purpose: config.purpose || preset?.purpose || '自訂 Notion 資料庫',
+      databaseId: config.databaseId || '',
+      pageUrl: config.pageUrl || '',
+      locked: Boolean(config.locked)
+    };
+  });
 }
 
 function App() {
@@ -423,7 +443,7 @@ function ActiveView(props) {
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
           <PageHeader title="Notion / 知識庫" subtitle="分層查看不同資料庫的摘要，需要細節時再點進 Notion 原頁。" />
-          <NotionWorkspace />
+          <NotionWorkspace notionConfig={notionConfig} />
         </div>
         <aside className="insightRail">
           <NotionPanel notes={notes} syncNote={syncNote} />
@@ -781,21 +801,29 @@ function VoiceNotePanel({ addVoiceNote }) {
   );
 }
 
-function NotionWorkspace() {
-  const [activeDatabase, setActiveDatabase] = useState('knowledge');
-  const activeInfo = notionDatabases.find((item) => item.id === activeDatabase) || notionDatabases[0];
-  const activeDetail = notionDatabaseDetails[activeDatabase] || notionDatabaseDetails.knowledge;
-  const totalItems = notionDatabases.reduce((total, item) => total + item.count, 0);
+function NotionWorkspace({ notionConfig }) {
+  const configuredDatabases = getConfiguredNotionDatabases(notionConfig);
+  const defaultActive = configuredDatabases.some((item) => item.id === 'knowledge') ? 'knowledge' : configuredDatabases[0]?.id;
+  const [activeDatabase, setActiveDatabase] = useState(defaultActive);
+  const activeInfo = configuredDatabases.find((item) => item.id === activeDatabase) || configuredDatabases[0];
+  const activeDetail = notionDatabaseDetails[activeDatabase] || {
+    headline: activeInfo?.databaseId ? '這個自訂資料庫已設定，接上 Notion API 後會顯示摘要。' : '尚未設定這個資料庫的 Database ID。',
+    pending: 0,
+    updatedAt: activeInfo?.databaseId ? '已設定' : '尚未連接',
+    items: []
+  };
+  const totalItems = configuredDatabases.reduce((total, item) => total + item.count, 0);
   const totalPending = Object.values(notionDatabaseDetails).reduce((total, item) => total + item.pending, 0);
+  const connectedCount = configuredDatabases.filter((item) => item.databaseId).length;
 
   return (
     <section className="panel notionWorkspace">
-      <div className="panelTitle"><h2>Notion Dashboard <small>{notionDatabases.length}</small></h2><span>多資料庫摘要</span></div>
+      <div className="panelTitle"><h2>Notion Dashboard <small>{configuredDatabases.length}</small></h2><span>自訂資料庫摘要</span></div>
       <div className="notionDashboardGrid">
         <article>
           <span>資料庫</span>
-          <strong>{notionDatabases.length}</strong>
-          <p>任務、知識、客戶、會議</p>
+          <strong>{configuredDatabases.length}</strong>
+          <p>{connectedCount} 個已設定 Database ID</p>
         </article>
         <article>
           <span>總項目</span>
@@ -809,22 +837,22 @@ function NotionWorkspace() {
         </article>
       </div>
       <div className="databaseCards">
-        {notionDatabases.map(({ id, label, icon: Icon, count, status }) => {
+        {configuredDatabases.map(({ id, label, icon: Icon, count, status, purpose, databaseId }) => {
           const detail = notionDatabaseDetails[id];
           return (
             <button className={activeDatabase === id ? 'activeDatabaseCard' : ''} key={id} onClick={() => setActiveDatabase(id)}>
               <Icon size={18} />
               <strong>{label}</strong>
-              <span>{count} 筆 · {status}</span>
-              <p>{detail.headline}</p>
+              <span>{databaseId ? '已設定' : `${count} 筆 · ${status}`}</span>
+              <p>{detail?.headline || purpose}</p>
             </button>
           );
         })}
       </div>
       <div className="databaseTabs">
-        {notionDatabases.map(({ id, label, icon: Icon, count }) => (
+        {configuredDatabases.map(({ id, label, icon: Icon, count, databaseId }) => (
           <button className={activeDatabase === id ? 'activeDatabase' : ''} key={id} onClick={() => setActiveDatabase(id)}>
-            <Icon size={16} /><span>{label}</span><small>{count}</small>
+            <Icon size={16} /><span>{label}</span><small>{databaseId ? '已設' : count}</small>
           </button>
         ))}
       </div>
@@ -845,10 +873,14 @@ function NotionWorkspace() {
             </article>
           ))
         ) : (
-          <div className="emptyState">尚未連接 {activeInfo.label}。到設定頁填入這個資料庫的 Database ID 與連結。</div>
+          <div className="emptyState">尚未載入 {activeInfo.label} 資料。到設定頁填入 Database ID，接上 Notion API 後會顯示真摘要。</div>
         )}
       </div>
-      <button className="wideButton"><ExternalLink size={16} />開啟 {activeInfo.label} 看更多</button>
+      {activeInfo.pageUrl ? (
+        <a className="wideButton" href={activeInfo.pageUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} />開啟 {activeInfo.label} 看更多</a>
+      ) : (
+        <button className="wideButton"><ExternalLink size={16} />尚未設定 {activeInfo.label} 連結</button>
+      )}
     </section>
   );
 }
@@ -889,7 +921,11 @@ function NewsWorkspace({ newsState }) {
 
 function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
   const pwaInstall = usePwaInstall();
-  const databaseConfig = notionConfig.databases || defaultNotionDatabaseConfig;
+  const databaseConfig = {
+    ...defaultNotionDatabaseConfig,
+    ...(notionConfig.databases || {})
+  };
+  const configuredDatabases = Object.values(databaseConfig);
 
   function updateConfig(field, value) {
     setNotionConfig((current) => ({ ...current, [field]: value }));
@@ -910,6 +946,42 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
     }));
   }
 
+  function addCustomDatabase() {
+    const name = window.prompt('輸入 Notion 資料庫名稱');
+    if (!name?.trim()) return;
+    const id = `custom-${Date.now()}`;
+
+    setNotionConfig((current) => ({
+      ...current,
+      databases: {
+        ...defaultNotionDatabaseConfig,
+        ...(current.databases || {}),
+        [id]: {
+          id,
+          label: name.trim(),
+          databaseId: '',
+          pageUrl: '',
+          purpose: '自訂 Notion 資料庫',
+          locked: false
+        }
+      }
+    }));
+  }
+
+  function deleteCustomDatabase(databaseId) {
+    const target = databaseConfig[databaseId];
+    if (!target || target.locked) return;
+
+    setNotionConfig((current) => {
+      const nextDatabases = {
+        ...defaultNotionDatabaseConfig,
+        ...(current.databases || {})
+      };
+      delete nextDatabases[databaseId];
+      return { ...current, databases: nextDatabases };
+    });
+  }
+
   return (
     <section className="panel notionWorkspace">
       <div className="panelTitle"><h2>連線設定</h2><span>本機保存</span></div>
@@ -919,24 +991,41 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
         <label><span>API Token Key</span><input value={notionConfig.token} onChange={(event) => updateConfig('token', event.target.value)} placeholder="secret_..." type="password" /></label>
         <label><span>新聞關鍵字</span><input value={notionConfig.newsKeywords} onChange={(event) => updateConfig('newsKeywords', event.target.value)} placeholder="國際, 金融, 供應鏈" /></label>
       </div>
+      <div className="databaseSettingsHeader">
+        <div>
+          <strong>Notion 資料庫</strong>
+          <span>保留任務、知識庫、會議筆記，也可以新增任何自訂資料庫。</span>
+        </div>
+        <button className="secondaryAction" onClick={addCustomDatabase}><Plus size={17} />新增資料庫</button>
+      </div>
       <div className="databaseSettings">
-        {notionDatabases.map(({ id, label, icon: Icon }) => {
-          const config = databaseConfig[id] || defaultNotionDatabaseConfig[id];
+        {configuredDatabases.map((config) => {
+          const preset = notionDatabases.find((item) => item.id === config.id);
+          const Icon = preset?.icon || BriefcaseBusiness;
           return (
-            <article key={id}>
+            <article key={config.id}>
               <div className="databaseSettingTitle">
                 <Icon size={17} />
-                <strong>{label}</strong>
+                <strong>{config.label}</strong>
                 <span>{config.purpose}</span>
               </div>
               <label>
+                <span>資料庫名稱</span>
+                <input value={config.label} onChange={(event) => updateDatabaseConfig(config.id, 'label', event.target.value)} disabled={config.locked} placeholder="資料庫名稱" />
+              </label>
+              <label>
+                <span>用途說明</span>
+                <input value={config.purpose} onChange={(event) => updateDatabaseConfig(config.id, 'purpose', event.target.value)} placeholder="這個資料庫拿來做什麼" />
+              </label>
+              <label>
                 <span>Database ID</span>
-                <input value={config.databaseId} onChange={(event) => updateDatabaseConfig(id, 'databaseId', event.target.value)} placeholder={`${label} database id`} />
+                <input value={config.databaseId} onChange={(event) => updateDatabaseConfig(config.id, 'databaseId', event.target.value)} placeholder={`${config.label} database id`} />
               </label>
               <label>
                 <span>Notion 頁面 / 資料庫連結</span>
-                <input value={config.pageUrl} onChange={(event) => updateDatabaseConfig(id, 'pageUrl', event.target.value)} placeholder="https://www.notion.so/..." />
+                <input value={config.pageUrl} onChange={(event) => updateDatabaseConfig(config.id, 'pageUrl', event.target.value)} placeholder="https://www.notion.so/..." />
               </label>
+              {!config.locked && <button className="dangerButton" onClick={() => deleteCustomDatabase(config.id)}><Trash2 size={15} />刪除自訂資料庫</button>}
             </article>
           );
         })}

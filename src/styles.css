@@ -922,6 +922,32 @@ a {
   gap: 12px;
 }
 
+.databaseSettingsHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0 2px;
+}
+
+.databaseSettingsHeader div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.databaseSettingsHeader strong {
+  color: #f8fbff;
+}
+
+.databaseSettingsHeader span {
+  color: #9fb2cc;
+  font-size: 13px;
+}
+
+.databaseSettingsHeader button {
+  margin-left: auto;
+}
+
 .databaseSettings article {
   display: grid;
   gap: 10px;
@@ -975,6 +1001,29 @@ a {
   padding: 0 10px;
   background: rgba(6, 15, 28, 0.62);
   color: #e5f0ff;
+}
+
+.databaseSettings input:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.dangerButton {
+  width: fit-content;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  border-radius: 8px;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.18);
+}
+
+.dangerButton:hover {
+  border-color: rgba(248, 113, 113, 0.58);
+  color: #fff;
 }
 
 .securityNote {
@@ -1959,6 +2008,15 @@ body {
 
   .pwaInstallCard {
     grid-template-columns: 1fr;
+  }
+
+  .databaseSettingsHeader {
+    display: grid;
+  }
+
+  .databaseSettingsHeader button {
+    width: 100%;
+    margin-left: 0;
   }
 
   .databaseSummary {
