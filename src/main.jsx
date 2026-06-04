@@ -125,10 +125,16 @@ const notionDatabaseDetails = {
 };
 
 const defaultNotionDatabaseConfig = {
-  tasks: { id: 'tasks', label: '任務資料庫', databaseId: '', pageUrl: '', purpose: '任務同步、待辦與工作狀態', locked: true },
-  knowledge: { id: 'knowledge', label: '知識庫', databaseId: '', pageUrl: '', purpose: '知識庫、SOP、技術筆記與決策紀錄', locked: true },
-  meetings: { id: 'meetings', label: '會議筆記', databaseId: '', pageUrl: '', purpose: '會議逐字稿、重點摘要與決議', locked: true }
+  tasks: { id: 'tasks', label: '任務資料庫', sourceType: 'database', databaseId: '', pageUrl: '', purpose: '任務同步、待辦與工作狀態', sortMode: 'updated', analysisLimit: 3, locked: true },
+  knowledge: { id: 'knowledge', label: '知識庫', sourceType: 'database', databaseId: '', pageUrl: '', purpose: '知識庫、SOP、技術筆記與決策紀錄', sortMode: 'updated', analysisLimit: 3, locked: true },
+  meetings: { id: 'meetings', label: '會議筆記', sourceType: 'folder', databaseId: '', pageUrl: '', purpose: '會議逐字稿、重點摘要與決議', sortMode: 'updated', analysisLimit: 3, locked: true }
 };
+
+const notionSortOptions = [
+  { value: 'updated', label: '最近更新優先' },
+  { value: 'title-date-desc', label: '標題日期新到舊' },
+  { value: 'manual', label: '照頁面順序' }
+];
 
 const newsBriefs = [
   { topic: '尚未載入', title: '新聞 RSS 等待連線', summary: '部署到 Cloudflare 後會由 /api/news/brief 抓取中文新聞與金融資訊。' }
@@ -268,10 +274,15 @@ function getConfiguredNotionDatabases(notionConfig) {
       label: config.label || preset?.label || '自訂資料庫',
       icon: preset?.icon || BriefcaseBusiness,
       count: 0,
-      status: config.databaseId ? '已設定' : '尚未連接',
+      status: (config.sourceType || 'database') === 'folder'
+        ? (config.pageUrl ? '已設定父頁' : '尚未連接')
+        : (config.databaseId ? '已設定資料庫' : '尚未連接'),
       purpose: config.purpose || preset?.purpose || '自訂 Notion 資料庫',
+      sourceType: config.sourceType || 'database',
       databaseId: config.databaseId || '',
       pageUrl: config.pageUrl || '',
+      sortMode: config.sortMode || 'updated',
+      analysisLimit: Math.min(3, Math.max(1, Number(config.analysisLimit || 3))),
       locked: Boolean(config.locked)
     };
   });
@@ -806,15 +817,21 @@ function NotionWorkspace({ notionConfig }) {
   const defaultActive = configuredDatabases.some((item) => item.id === 'knowledge') ? 'knowledge' : configuredDatabases[0]?.id;
   const [activeDatabase, setActiveDatabase] = useState(defaultActive);
   const activeInfo = configuredDatabases.find((item) => item.id === activeDatabase) || configuredDatabases[0];
+  const activeIsFolder = activeInfo?.sourceType === 'folder';
+  const activeSortLabel = notionSortOptions.find((item) => item.value === activeInfo?.sortMode)?.label || '最近更新優先';
   const activeDetail = notionDatabaseDetails[activeDatabase] || {
-    headline: activeInfo?.databaseId ? '這個自訂資料庫已設定，接上 Notion API 後會顯示摘要。' : '尚未設定這個資料庫的 Database ID。',
+    headline: activeIsFolder
+      ? '這個父頁已設定，接上 Notion API 後會讀取子頁、排序，並摘要最新報告。'
+      : activeInfo?.databaseId
+        ? '這個自訂資料庫已設定，接上 Notion API 後會顯示摘要。'
+        : '尚未設定這個資料庫的 Database ID。',
     pending: 0,
-    updatedAt: activeInfo?.databaseId ? '已設定' : '尚未連接',
+    updatedAt: activeInfo?.databaseId || activeInfo?.pageUrl ? '已設定' : '尚未連接',
     items: []
   };
   const totalItems = configuredDatabases.reduce((total, item) => total + item.count, 0);
   const totalPending = Object.values(notionDatabaseDetails).reduce((total, item) => total + item.pending, 0);
-  const connectedCount = configuredDatabases.filter((item) => item.databaseId).length;
+  const connectedCount = configuredDatabases.filter((item) => item.databaseId || item.pageUrl).length;
 
   return (
     <section className="panel notionWorkspace">
@@ -823,7 +840,7 @@ function NotionWorkspace({ notionConfig }) {
         <article>
           <span>資料庫</span>
           <strong>{configuredDatabases.length}</strong>
-          <p>{connectedCount} 個已設定 Database ID</p>
+          <p>{connectedCount} 個已設定來源</p>
         </article>
         <article>
           <span>總項目</span>
@@ -837,27 +854,28 @@ function NotionWorkspace({ notionConfig }) {
         </article>
       </div>
       <div className="databaseCards">
-        {configuredDatabases.map(({ id, label, icon: Icon, count, status, purpose, databaseId }) => {
+        {configuredDatabases.map(({ id, label, icon: Icon, count, status, purpose, databaseId, pageUrl, sourceType, analysisLimit }) => {
           const detail = notionDatabaseDetails[id];
+          const isConnected = Boolean(databaseId || pageUrl);
           return (
             <button className={activeDatabase === id ? 'activeDatabaseCard' : ''} key={id} onClick={() => setActiveDatabase(id)}>
               <Icon size={18} />
               <strong>{label}</strong>
-              <span>{databaseId ? '已設定' : `${count} 筆 · ${status}`}</span>
+              <span>{isConnected ? `${sourceType === 'folder' ? '父頁' : '資料庫'} · 分析 ${analysisLimit} 頁` : `${count} 筆 · ${status}`}</span>
               <p>{detail?.headline || purpose}</p>
             </button>
           );
         })}
       </div>
       <div className="databaseTabs">
-        {configuredDatabases.map(({ id, label, icon: Icon, count, databaseId }) => (
+        {configuredDatabases.map(({ id, label, icon: Icon, count, databaseId, pageUrl }) => (
           <button className={activeDatabase === id ? 'activeDatabase' : ''} key={id} onClick={() => setActiveDatabase(id)}>
-            <Icon size={16} /><span>{label}</span><small>{databaseId ? '已設' : count}</small>
+            <Icon size={16} /><span>{label}</span><small>{databaseId || pageUrl ? '已設' : count}</small>
           </button>
         ))}
       </div>
       <div className="databaseSummary">
-        <div><strong>{activeInfo.label}</strong><span>{activeInfo.status} · {activeDetail.updatedAt}更新 · {activeDetail.pending} 筆待整理</span></div>
+        <div><strong>{activeInfo.label}</strong><span>{activeInfo.status} · {activeSortLabel} · 最多分析 {activeInfo.analysisLimit} 個子頁</span></div>
         <button><Wand2 size={16} />重新整理摘要</button>
       </div>
       <div className="databaseInsight">
@@ -873,7 +891,9 @@ function NotionWorkspace({ notionConfig }) {
             </article>
           ))
         ) : (
-          <div className="emptyState">尚未載入 {activeInfo.label} 資料。到設定頁填入 Database ID，接上 Notion API 後會顯示真摘要。</div>
+          <div className="emptyState">
+            尚未載入 {activeInfo.label} 資料。到設定頁設定{activeIsFolder ? '父頁連結' : 'Database ID'}，接上 Notion API 後會顯示真摘要與原頁連結。
+          </div>
         )}
       </div>
       {activeInfo.pageUrl ? (
@@ -959,9 +979,12 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
         [id]: {
           id,
           label: name.trim(),
+          sourceType: 'folder',
           databaseId: '',
           pageUrl: '',
           purpose: '自訂 Notion 資料庫',
+          sortMode: 'title-date-desc',
+          analysisLimit: 3,
           locked: false
         }
       }
@@ -994,7 +1017,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       <div className="databaseSettingsHeader">
         <div>
           <strong>Notion 資料庫</strong>
-          <span>保留任務、知識庫、會議筆記，也可以新增任何自訂資料庫。</span>
+          <span>保留任務、知識庫、會議筆記，也可以新增父頁資料夾或自訂資料庫。</span>
         </div>
         <button className="secondaryAction" onClick={addCustomDatabase}><Plus size={17} />新增資料庫</button>
       </div>
@@ -1018,13 +1041,41 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
                 <input value={config.purpose} onChange={(event) => updateDatabaseConfig(config.id, 'purpose', event.target.value)} placeholder="這個資料庫拿來做什麼" />
               </label>
               <label>
-                <span>Database ID</span>
-                <input value={config.databaseId} onChange={(event) => updateDatabaseConfig(config.id, 'databaseId', event.target.value)} placeholder={`${config.label} database id`} />
+                <span>資料來源類型</span>
+                <select value={config.sourceType || 'database'} onChange={(event) => updateDatabaseConfig(config.id, 'sourceType', event.target.value)}>
+                  <option value="database">Notion Database</option>
+                  <option value="folder">父頁資料夾</option>
+                </select>
               </label>
+              {(config.sourceType || 'database') === 'database' && (
+                <label>
+                  <span>Database ID</span>
+                  <input value={config.databaseId} onChange={(event) => updateDatabaseConfig(config.id, 'databaseId', event.target.value)} placeholder={`${config.label} database id`} />
+                </label>
+              )}
               <label>
-                <span>Notion 頁面 / 資料庫連結</span>
+                <span>{(config.sourceType || 'database') === 'folder' ? '父頁連結' : 'Notion 頁面 / 資料庫連結'}</span>
                 <input value={config.pageUrl} onChange={(event) => updateDatabaseConfig(config.id, 'pageUrl', event.target.value)} placeholder="https://www.notion.so/..." />
               </label>
+              <div className="settingPair">
+                <label>
+                  <span>排序方式</span>
+                  <select value={config.sortMode || 'updated'} onChange={(event) => updateDatabaseConfig(config.id, 'sortMode', event.target.value)}>
+                    {notionSortOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>分析子頁上限</span>
+                  <select value={String(config.analysisLimit || 3)} onChange={(event) => updateDatabaseConfig(config.id, 'analysisLimit', Number(event.target.value))}>
+                    <option value="1">1 個</option>
+                    <option value="2">2 個</option>
+                    <option value="3">3 個</option>
+                  </select>
+                </label>
+              </div>
+              {(config.sourceType || 'database') === 'folder' && (
+                <p className="settingHint">父頁資料夾會抓這個頁面底下的子頁，依排序方式取前 {config.analysisLimit || 3} 個頁面整理摘要。</p>
+              )}
               {!config.locked && <button className="dangerButton" onClick={() => deleteCustomDatabase(config.id)}><Trash2 size={15} />刪除自訂資料庫</button>}
             </article>
           );

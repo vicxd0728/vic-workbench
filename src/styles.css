@@ -991,7 +991,8 @@ a {
   font-weight: 700;
 }
 
-.databaseSettings input {
+.databaseSettings input,
+.databaseSettings select {
   width: 100%;
   min-width: 0;
   height: 38px;
@@ -1003,9 +1004,30 @@ a {
   color: #e5f0ff;
 }
 
+.databaseSettings select {
+  cursor: pointer;
+}
+
 .databaseSettings input:disabled {
   opacity: 0.72;
   cursor: not-allowed;
+}
+
+.settingPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settingHint {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(250, 204, 21, 0.18);
+  border-radius: 8px;
+  background: rgba(250, 204, 21, 0.08);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .dangerButton {
@@ -2002,7 +2024,8 @@ body {
   .newsGrid,
   .databaseCards,
   .notionDashboardGrid,
-  .databaseSettings {
+  .databaseSettings,
+  .settingPair {
     grid-template-columns: 1fr;
   }
 
