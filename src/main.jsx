@@ -89,10 +89,10 @@ const initialNotes = [];
 const initialProjects = [];
 
 const notionDatabases = [
-  { id: 'tasks', label: '任務資料庫', icon: CheckSquare, count: 18, status: '待同步' },
-  { id: 'knowledge', label: '知識庫', icon: BookOpen, count: 42, status: '整理中' },
-  { id: 'clients', label: '客戶與專案', icon: BriefcaseBusiness, count: 9, status: '本週更新' },
-  { id: 'meetings', label: '會議筆記', icon: Mic, count: 7, status: '可摘要' }
+  { id: 'tasks', label: '任務資料庫', icon: CheckSquare, count: 0, status: '尚未連接' },
+  { id: 'knowledge', label: '知識庫', icon: BookOpen, count: 0, status: '尚未連接' },
+  { id: 'clients', label: '客戶與專案', icon: BriefcaseBusiness, count: 0, status: '尚未連接' },
+  { id: 'meetings', label: '會議筆記', icon: Mic, count: 0, status: '尚未連接' }
 ];
 
 const notionHighlights = [
@@ -800,7 +800,7 @@ function NotionWorkspace() {
         <article>
           <span>總項目</span>
           <strong>{totalItems}</strong>
-          <p>未來由 Notion API 即時更新</p>
+          <p>{totalItems > 0 ? '由 Notion API 即時更新' : '尚未連接 Notion'}</p>
         </article>
         <article>
           <span>待整理</span>
