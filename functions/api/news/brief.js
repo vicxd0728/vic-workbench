@@ -32,13 +32,13 @@ const NEWS_SOURCES = [
   {
     id: 'yahoo-finance',
     topic: '金融',
-    source: 'Yahoo股市',
+    source: 'Yahoo 股市',
     url: 'https://tw.stock.yahoo.com/rss?category=news'
   },
   {
     id: 'yahoo-intl-markets',
     topic: '國際金融',
-    source: 'Yahoo股市',
+    source: 'Yahoo 股市',
     url: 'https://tw.stock.yahoo.com/rss?category=intl-markets'
   }
 ];
@@ -65,6 +65,12 @@ const IMPORTANT_WORDS = [
   '通膨',
   '央行'
 ];
+
+function timeoutSignal(ms) {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort('timeout'), ms);
+  return controller.signal;
+}
 
 function decodeEntities(value = '') {
   return value
@@ -116,9 +122,8 @@ function parseItems(xml, feed) {
 async function fetchFeed(feed) {
   try {
     const response = await fetch(feed.url, {
-      headers: {
-        'User-Agent': 'VicWorkbench/1.0 RSS Reader'
-      }
+      headers: { 'User-Agent': 'VicWorkbench/1.0 RSS Reader' },
+      signal: timeoutSignal(4500)
     });
 
     if (!response.ok) {
@@ -128,7 +133,7 @@ async function fetchFeed(feed) {
     const xml = await response.text();
     return { ok: true, feed, items: parseItems(xml, feed) };
   } catch (error) {
-    return { ok: false, feed, error: error.message, items: [] };
+    return { ok: false, feed, error: error?.message || 'fetch failed', items: [] };
   }
 }
 
@@ -138,6 +143,17 @@ function groupBriefs(items) {
   for (const item of items) {
     if (!groups.has(item.topic)) groups.set(item.topic, []);
     groups.get(item.topic).push(item);
+  }
+
+  if (!groups.size) {
+    return [
+      {
+        topic: '狀態',
+        title: '新聞來源暫時沒有回應',
+        summary: '請稍後重新整理，或檢查 Cloudflare Function logs。',
+        items: []
+      }
+    ];
   }
 
   return Array.from(groups.entries()).map(([topic, topicItems]) => {
@@ -170,7 +186,7 @@ export async function onRequestGet({ request }) {
     .slice(0, limit);
 
   return Response.json({
-    connected: true,
+    connected: items.length > 0,
     fetchedAt: new Date().toISOString(),
     sources: results.map((result) => ({
       id: result.feed.id,
