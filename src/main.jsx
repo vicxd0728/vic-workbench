@@ -42,12 +42,12 @@ const todayLabel = new Intl.DateTimeFormat('zh-TW', {
 }).format(new Date());
 
 const storageKeys = {
-  tasks: 'vic-workbench:v5:tasks',
-  notes: 'vic-workbench:v5:notes',
-  projects: 'vic-workbench:v5:projects',
-  captureType: 'vic-workbench:v5:capture-type',
-  activeView: 'vic-workbench:v5:active-view',
-  notionConfig: 'vic-workbench:v5:notion-config'
+  tasks: 'vic-workbench:v6:tasks',
+  notes: 'vic-workbench:v6:notes',
+  projects: 'vic-workbench:v6:projects',
+  captureType: 'vic-workbench:v6:capture-type',
+  activeView: 'vic-workbench:v6:active-view',
+  notionConfig: 'vic-workbench:v6:notion-config'
 };
 
 const navItems = [
@@ -82,24 +82,11 @@ const typeLabels = {
   voice: '語音筆記'
 };
 
-const initialTasks = [
-  { id: 1, title: '整理本週要推進的三件事', area: '工作', stage: 'today', estimate: '30 分', done: false, important: true },
-  { id: 2, title: '確認 ERP 手機版加入主畫面流程', area: 'LEMATEC', stage: 'today', estimate: '20 分', done: false, important: false },
-  { id: 3, title: '把 Dashboard 下一步功能寫成 Notion 規格', area: '自動化', stage: 'next', estimate: '45 分', done: false, important: true },
-  { id: 4, title: '等待 Notion 資料庫欄位確認', area: '串接', stage: 'waiting', estimate: '待回覆', done: false, important: false }
-];
+const initialTasks = [];
 
-const initialNotes = [
-  { id: 11, title: 'Dashboard 要像每天打開的控制台，不是展示頁', type: 'note', time: '今天', synced: false },
-  { id: 12, title: 'Notion 先做任務、筆記、連結三種資料庫', type: 'idea', time: '昨天', synced: false },
-  { id: 13, title: 'Cloudflare Pages 可當作工作台部署位置', type: 'link', time: '5/25', synced: true }
-];
+const initialNotes = [];
 
-const initialProjects = [
-  { id: 21, name: '個人工作台', status: '重新整理', progress: 68, due: '6/10', color: 'blue' },
-  { id: 22, name: 'LEMATEC ERP PWA', status: '已上線', progress: 92, due: '完成', color: 'green' },
-  { id: 23, name: 'Notion 知識庫', status: '待串接', progress: 32, due: '6/15', color: 'amber' }
-];
+const initialProjects = [];
 
 const notionDatabases = [
   { id: 'tasks', label: '任務資料庫', icon: CheckSquare, count: 18, status: '待同步' },
@@ -109,73 +96,44 @@ const notionDatabases = [
 ];
 
 const notionHighlights = [
-  {
-    title: 'ERP PWA 部署與手機加入主畫面流程',
-    database: '知識庫',
-    summary: 'Cloudflare Pages 作為正式入口，iPhone 需重新加入主畫面才會更新圖示與啟動畫面。',
-    url: 'https://lematec-erp.pages.dev/'
-  },
-  {
-    title: '個人工作台下一階段',
-    database: '任務資料庫',
-    summary: '先完成 Notion 設定、資料庫摘要、語音筆記同步，再處理新聞與金融資訊來源。',
-    url: 'https://www.notion.so/'
-  },
-  {
-    title: '語音重點筆記規格',
-    database: '會議筆記',
-    summary: '錄音轉文字後自動萃取重點，保留逐字稿、摘要與待辦，之後寫入 Notion。',
-    url: 'https://www.notion.so/'
-  }
 ];
 
 const notionDatabaseDetails = {
   tasks: {
-    headline: '任務資料庫目前以同步佇列和待辦狀態為主，適合每天早上快速掃描。',
-    pending: 6,
-    updatedAt: '今天',
-    items: [
-      { title: '把 Dashboard 下一步功能完成 Notion 規格', summary: '定義資料庫欄位、同步格式、摘要顯示方式。', url: 'https://www.notion.so/' },
-      { title: '確認 Cloudflare Pages 部署流程', summary: '前端用 Pages，私密 token 用 Functions 或 Worker。', url: 'https://developers.cloudflare.com/pages/' },
-      { title: '整理語音筆記轉任務規則', summary: '從逐字稿抽出待辦、期限、負責人與原始摘要。', url: 'https://www.notion.so/' }
-    ]
+    headline: '連接 Notion 任務資料庫後，這裡會顯示待辦、狀態與摘要。',
+    pending: 0,
+    updatedAt: '尚未連接',
+    items: []
   },
   knowledge: {
-    headline: '知識庫用來放已整理過的流程、技術筆記、決策紀錄與可重複使用的 SOP。',
-    pending: 12,
-    updatedAt: '昨天',
-    items: [
-      { title: 'ERP PWA 部署與手機加入主畫面流程', summary: 'Cloudflare Pages 作為正式入口，重新加入主畫面才會更新圖示。', url: 'https://lematec-erp.pages.dev/' },
-      { title: '個人工作台資訊架構', summary: '首頁收斂成 Dashboard，細節分到 Notion、新聞、專案、設定頁。', url: 'https://www.notion.so/' },
-      { title: 'Cloudflare Pages + Functions 架構', summary: '靜態前端與私密 API 分離，避免 token 暴露。', url: 'https://developers.cloudflare.com/pages/functions/' }
-    ]
+    headline: '連接知識庫資料庫後，這裡會顯示 SOP、技術筆記與決策紀錄摘要。',
+    pending: 0,
+    updatedAt: '尚未連接',
+    items: []
   },
   clients: {
-    headline: '客戶與專案資料庫用來追蹤合作狀態、下一步、報價、交付與往來重點。',
-    pending: 4,
-    updatedAt: '本週',
-    items: [
-      { title: 'LEMATEC ERP 行動入口', summary: '已切換到 Cloudflare Pages，後續可補 PWA 與登入入口說明。', url: 'https://lematec-erp.pages.dev/' },
-      { title: '專案狀態總覽', summary: '把正在進行、等待回覆、已完成的專案集中呈現。', url: 'https://www.notion.so/' },
-      { title: '客戶會議待整理', summary: '語音筆記可先收進會議資料庫，再整理成任務與結論。', url: 'https://www.notion.so/' }
-    ]
+    headline: '連接客戶與專案資料庫後，這裡會顯示合作狀態、下一步與重要往來。',
+    pending: 0,
+    updatedAt: '尚未連接',
+    items: []
   },
   meetings: {
-    headline: '會議筆記資料庫會收語音轉文字、重點摘要、決議與待辦，方便回頭查。',
-    pending: 7,
-    updatedAt: '今天',
-    items: [
-      { title: '語音重點筆記規格', summary: '錄音轉文字後自動萃取重點，保留逐字稿與摘要。', url: 'https://www.notion.so/' },
-      { title: 'Notion API 串接討論', summary: '一組 token 共用多資料庫，後端統一處理查詢與摘要。', url: 'https://www.notion.so/' },
-      { title: '新聞情報來源討論', summary: '先用中文 RSS 聚合，不需要付費新聞 API。', url: 'https://www.notion.so/' }
-    ]
+    headline: '連接會議筆記資料庫後，語音逐字稿、重點摘要與決議會顯示在這裡。',
+    pending: 0,
+    updatedAt: '尚未連接',
+    items: []
   }
 };
 
+const defaultNotionDatabaseConfig = {
+  tasks: { databaseId: '', pageUrl: '', purpose: '任務同步、待辦與工作狀態' },
+  knowledge: { databaseId: '', pageUrl: '', purpose: '知識庫、SOP、技術筆記與決策紀錄' },
+  clients: { databaseId: '', pageUrl: '', purpose: '客戶、專案、報價與合作紀錄' },
+  meetings: { databaseId: '', pageUrl: '', purpose: '會議逐字稿、重點摘要與決議' }
+};
+
 const newsBriefs = [
-  { topic: '國際', title: '國際新聞摘要', summary: '未來串接新聞 API 或 RSS 後，首頁只顯示最重要的三點。' },
-  { topic: '金融', title: '金融市場快訊', summary: '追蹤美股、匯率、利率、原物料與加密貨幣，整理成每日風險提醒。' },
-  { topic: '供應鏈', title: '產業與供應鏈', summary: '針對電子、製造、材料與客戶產業建立關鍵字監控。' }
+  { topic: '尚未載入', title: '新聞 RSS 等待連線', summary: '部署到 Cloudflare 後會由 /api/news/brief 抓取中文新聞與金融資訊。' }
 ];
 
 function useNewsBriefs() {
@@ -309,6 +267,7 @@ function App() {
     workspaceUrl: '',
     token: '',
     defaultDatabase: '',
+    databases: defaultNotionDatabaseConfig,
     newsKeywords: '國際, 金融, 匯率, 供應鏈'
   });
   const [draft, setDraft] = useState('');
@@ -380,11 +339,11 @@ function App() {
     setLastAction('已標記為已同步');
   }
 
-  function resetDemoData() {
+  function clearLocalData() {
     setTasks(initialTasks);
     setNotes(initialNotes);
     setProjects(initialProjects);
-    setLastAction('已重置示範資料');
+    setLastAction('已清空本機資料');
   }
 
   function exportData() {
@@ -425,7 +384,7 @@ function App() {
           moveTask={moveTask}
           deleteTask={deleteTask}
           syncNote={syncNote}
-          resetDemoData={resetDemoData}
+          resetDemoData={clearLocalData}
           newsState={newsState}
         />
       </main>
@@ -646,13 +605,21 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView }) {
           <button onClick={() => setActiveView('projects')}>看任務 <ChevronRight size={15} /></button>
         </div>
         <div className="priorityList">
-          {importantTasks.map((task) => (
-            <div key={task.id}>
+          {importantTasks.length > 0 ? (
+            importantTasks.map((task) => (
+              <div key={task.id}>
+                <CheckSquare size={16} />
+                <strong>{task.title}</strong>
+                <span>{task.area} · {stageLabels[task.stage]}</span>
+              </div>
+            ))
+          ) : (
+            <div>
               <CheckSquare size={16} />
-              <strong>{task.title}</strong>
-              <span>{task.area} · {stageLabels[task.stage]}</span>
+              <strong>目前沒有任務</strong>
+              <span>到收件匣新增第一筆任務</span>
             </div>
-          ))}
+          )}
         </div>
       </article>
       <article className="overviewCard">
@@ -663,9 +630,19 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView }) {
       </article>
       <article className="overviewCard">
         <h2>主要專案</h2>
-        <strong>{topProject.name}</strong>
-        <div className="progress"><b style={{ width: `${topProject.progress}%` }} /></div>
-        <p>{topProject.progress}% · {topProject.status}</p>
+        {topProject ? (
+          <>
+            <strong>{topProject.name}</strong>
+            <div className="progress"><b style={{ width: `${topProject.progress}%` }} /></div>
+            <p>{topProject.progress}% · {topProject.status}</p>
+          </>
+        ) : (
+          <>
+            <strong>尚未建立專案</strong>
+            <div className="progress"><b style={{ width: '0%' }} /></div>
+            <p>到專案頁建立你的第一個專案</p>
+          </>
+        )}
       </article>
       <article className="overviewCard wide">
         <div className="cardTitle">
@@ -860,12 +837,16 @@ function NotionWorkspace() {
         <p>{activeDetail.headline}</p>
       </div>
       <div className="summaryRows">
-        {activeDetail.items.map((item) => (
-          <article className="summaryRow" key={item.title}>
-            <div><span>{activeInfo.label}</span><strong>{item.title}</strong><p>{item.summary}</p></div>
-            <a href={item.url} target="_blank" rel="noreferrer" aria-label={`開啟 ${item.title}`}><ExternalLink size={16} /></a>
-          </article>
-        ))}
+        {activeDetail.items.length > 0 ? (
+          activeDetail.items.map((item) => (
+            <article className="summaryRow" key={item.title}>
+              <div><span>{activeInfo.label}</span><strong>{item.title}</strong><p>{item.summary}</p></div>
+              <a href={item.url} target="_blank" rel="noreferrer" aria-label={`開啟 ${item.title}`}><ExternalLink size={16} /></a>
+            </article>
+          ))
+        ) : (
+          <div className="emptyState">尚未連接 {activeInfo.label}。到設定頁填入這個資料庫的 Database ID 與連結。</div>
+        )}
       </div>
       <button className="wideButton"><ExternalLink size={16} />開啟 {activeInfo.label} 看更多</button>
     </section>
@@ -873,7 +854,7 @@ function NotionWorkspace() {
 }
 
 function NewsWorkspace({ newsState }) {
-  const statusLabel = newsState.status === 'ready' ? 'RSS 已更新' : '本機示範';
+  const statusLabel = newsState.status === 'ready' ? 'RSS 已更新' : '等待線上連線';
 
   return (
     <section className="panel notionWorkspace">
@@ -908,9 +889,25 @@ function NewsWorkspace({ newsState }) {
 
 function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
   const pwaInstall = usePwaInstall();
+  const databaseConfig = notionConfig.databases || defaultNotionDatabaseConfig;
 
   function updateConfig(field, value) {
     setNotionConfig((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateDatabaseConfig(databaseId, field, value) {
+    setNotionConfig((current) => ({
+      ...current,
+      databases: {
+        ...defaultNotionDatabaseConfig,
+        ...(current.databases || {}),
+        [databaseId]: {
+          ...defaultNotionDatabaseConfig[databaseId],
+          ...((current.databases || {})[databaseId] || {}),
+          [field]: value
+        }
+      }
+    }));
   }
 
   return (
@@ -920,12 +917,33 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       <div className="notionSetup">
         <label><span>Notion 網頁</span><input value={notionConfig.workspaceUrl} onChange={(event) => updateConfig('workspaceUrl', event.target.value)} placeholder="https://www.notion.so/..." /></label>
         <label><span>API Token Key</span><input value={notionConfig.token} onChange={(event) => updateConfig('token', event.target.value)} placeholder="secret_..." type="password" /></label>
-        <label><span>預設資料庫 ID</span><input value={notionConfig.defaultDatabase} onChange={(event) => updateConfig('defaultDatabase', event.target.value)} placeholder="Database ID" /></label>
         <label><span>新聞關鍵字</span><input value={notionConfig.newsKeywords} onChange={(event) => updateConfig('newsKeywords', event.target.value)} placeholder="國際, 金融, 供應鏈" /></label>
+      </div>
+      <div className="databaseSettings">
+        {notionDatabases.map(({ id, label, icon: Icon }) => {
+          const config = databaseConfig[id] || defaultNotionDatabaseConfig[id];
+          return (
+            <article key={id}>
+              <div className="databaseSettingTitle">
+                <Icon size={17} />
+                <strong>{label}</strong>
+                <span>{config.purpose}</span>
+              </div>
+              <label>
+                <span>Database ID</span>
+                <input value={config.databaseId} onChange={(event) => updateDatabaseConfig(id, 'databaseId', event.target.value)} placeholder={`${label} database id`} />
+              </label>
+              <label>
+                <span>Notion 頁面 / 資料庫連結</span>
+                <input value={config.pageUrl} onChange={(event) => updateDatabaseConfig(id, 'pageUrl', event.target.value)} placeholder="https://www.notion.so/..." />
+              </label>
+            </article>
+          );
+        })}
       </div>
       <div className="securityNote">正式上線時，Token 建議放在 Cloudflare Worker 或後端環境變數，不直接暴露在前端。</div>
       <div className="settingsActions">
-        <button className="secondaryAction" onClick={resetDemoData}><RotateCcw size={17} />重置示範資料</button>
+        <button className="secondaryAction" onClick={resetDemoData}><RotateCcw size={17} />清空本機資料</button>
       </div>
     </section>
   );
@@ -984,22 +1002,47 @@ function TaskBoard({ tasks, toggleTask, moveTask, deleteTask }) {
 }
 
 function ProjectPanel({ projects, setProjects }) {
+  function addProject() {
+    const name = window.prompt('輸入專案名稱');
+    if (!name?.trim()) return;
+
+    setProjects((current) => [
+      {
+        id: Date.now(),
+        name: name.trim(),
+        status: '新建立',
+        progress: 0,
+        due: '未設定',
+        color: 'blue'
+      },
+      ...current
+    ]);
+  }
+
   function bumpProgress(id) {
     setProjects((current) => current.map((project) => (project.id === id ? { ...project, progress: Math.min(100, project.progress + 8) } : project)));
   }
 
   return (
     <section className="panel projectsPanel">
-      <PanelTitle title="專案進度" count={projects.length} action="可手動更新" />
+      <div className="panelTitle">
+        <h2>專案進度 <small>{projects.length}</small></h2>
+        <button onClick={addProject}><Plus size={15} />新增專案</button>
+        <button className="plainIcon" aria-label="專案進度 選單"><MoreVertical size={17} /></button>
+      </div>
       <div className="projectRows">
-        {projects.map((project) => (
-          <article className="projectRow" key={project.id}>
-            <span className={`projectDot ${project.color}`} /><strong>{project.name}</strong><em>{project.status}</em>
-            <div className="progress"><b style={{ width: `${project.progress}%` }} /></div>
-            <span>{project.progress}%</span><small>{project.due}</small>
-            <button className="plainIcon" aria-label="增加進度" onClick={() => bumpProgress(project.id)}><ChevronRight size={17} /></button>
-          </article>
-        ))}
+        {projects.length > 0 ? (
+          projects.map((project) => (
+            <article className="projectRow" key={project.id}>
+              <span className={`projectDot ${project.color}`} /><strong>{project.name}</strong><em>{project.status}</em>
+              <div className="progress"><b style={{ width: `${project.progress}%` }} /></div>
+              <span>{project.progress}%</span><small>{project.due}</small>
+              <button className="plainIcon" aria-label="增加進度" onClick={() => bumpProgress(project.id)}><ChevronRight size={17} /></button>
+            </article>
+          ))
+        ) : (
+          <div className="emptyState">目前沒有專案。按「新增專案」建立第一筆。</div>
+        )}
       </div>
     </section>
   );
@@ -1065,7 +1108,7 @@ function AutomationPanel({ resetDemoData }) {
   ];
   return (
     <section className="panel resourcesPanel">
-      <div className="railTitle"><h2>常用入口</h2><button onClick={resetDemoData}><RotateCcw size={15} />重置</button></div>
+      <div className="railTitle"><h2>常用入口</h2><button onClick={resetDemoData}><RotateCcw size={15} />清空</button></div>
       <div className="resourceGrid">
         {links.map(([label, url]) => <a href={url} target="_blank" rel="noreferrer" key={label}><span>{label.slice(0, 1)}</span><strong>{label}</strong></a>)}
       </div>
@@ -1078,7 +1121,11 @@ function MiniSummary({ title, action, onClick, items }) {
     <section className="panel">
       <div className="railTitle"><h2>{title}</h2><button onClick={onClick}>{action}</button></div>
       <div className="miniList">
-        {items.map((item) => <article key={item.title}><strong>{item.title}</strong><p>{item.summary}</p></article>)}
+        {items.length > 0 ? (
+          items.map((item) => <article key={item.title}><strong>{item.title}</strong><p>{item.summary}</p></article>)
+        ) : (
+          <article><strong>尚未連接 Notion</strong><p>到設定頁填入多個 Database ID 後，這裡會顯示真正摘要。</p></article>
+        )}
       </div>
     </section>
   );

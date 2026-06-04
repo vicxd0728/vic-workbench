@@ -916,6 +916,67 @@ a {
   background: #fff;
 }
 
+.databaseSettings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.databaseSettings article {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(15, 27, 48, 0.88), rgba(9, 18, 34, 0.82));
+}
+
+.databaseSettingTitle {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+}
+
+.databaseSettingTitle svg {
+  color: #7dd3fc;
+}
+
+.databaseSettingTitle strong {
+  color: #f8fbff;
+  font-size: 14px;
+}
+
+.databaseSettingTitle span {
+  grid-column: 2;
+  color: #9fb2cc;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.databaseSettings label {
+  display: grid;
+  gap: 6px;
+}
+
+.databaseSettings label span {
+  color: #9fb2cc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.databaseSettings input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid rgba(125, 166, 217, 0.22);
+  border-radius: 8px;
+  outline: 0;
+  padding: 0 10px;
+  background: rgba(6, 15, 28, 0.62);
+  color: #e5f0ff;
+}
+
 .securityNote {
   padding: 10px 12px;
   border-radius: 8px;
@@ -1891,7 +1952,8 @@ body {
   .databaseTabs,
   .newsGrid,
   .databaseCards,
-  .notionDashboardGrid {
+  .notionDashboardGrid,
+  .databaseSettings {
     grid-template-columns: 1fr;
   }
 
