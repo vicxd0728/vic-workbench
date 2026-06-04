@@ -591,7 +591,7 @@ function Sidebar({ activeView, setActiveView, notes, tasks }) {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="brandMark">V</div>
+        <div className="brandMark"><img src="/icons/vic-workbench.svg" alt="" /></div>
         <div>
           <strong>Vic Workbench</strong>
           <span>個人中控台</span>
