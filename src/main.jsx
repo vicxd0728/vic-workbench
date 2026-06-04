@@ -136,6 +136,35 @@ const notionSortOptions = [
   { value: 'manual', label: '照頁面順序' }
 ];
 
+function normalizeNotionDatabaseConfigs(notionConfig) {
+  const storedConfigs = notionConfig?.databases || {};
+  const mergedKeys = Array.from(new Set([
+    ...Object.keys(defaultNotionDatabaseConfig),
+    ...Object.keys(storedConfigs)
+  ])).filter((key) => key && key !== 'undefined' && key !== 'null');
+
+  return mergedKeys.reduce((configs, key) => {
+    const defaults = defaultNotionDatabaseConfig[key] || {};
+    const stored = storedConfigs[key] || {};
+    const id = stored.id || defaults.id || key;
+    const preset = notionDatabases.find((item) => item.id === id);
+
+    configs[id] = {
+      id,
+      label: stored.label || defaults.label || preset?.label || '自訂資料庫',
+      sourceType: stored.sourceType || defaults.sourceType || 'database',
+      databaseId: stored.databaseId || defaults.databaseId || '',
+      pageUrl: stored.pageUrl || defaults.pageUrl || '',
+      purpose: stored.purpose || defaults.purpose || preset?.purpose || '自訂 Notion 資料庫',
+      sortMode: stored.sortMode || defaults.sortMode || 'updated',
+      analysisLimit: Math.min(3, Math.max(1, Number(stored.analysisLimit || defaults.analysisLimit || 3))),
+      locked: Boolean(defaults.locked || stored.locked)
+    };
+
+    return configs;
+  }, {});
+}
+
 const newsBriefs = [
   { topic: '尚未載入', title: '新聞 RSS 等待連線', summary: '部署到 Cloudflare 後會由 /api/news/brief 抓取中文新聞與金融資訊。' }
 ];
@@ -262,10 +291,7 @@ function extractKeyPoints(text) {
 }
 
 function getConfiguredNotionDatabases(notionConfig) {
-  const configs = {
-    ...defaultNotionDatabaseConfig,
-    ...(notionConfig?.databases || {})
-  };
+  const configs = normalizeNotionDatabaseConfigs(notionConfig);
 
   return Object.values(configs).map((config) => {
     const preset = notionDatabases.find((item) => item.id === config.id);
@@ -941,10 +967,7 @@ function NewsWorkspace({ newsState }) {
 
 function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
   const pwaInstall = usePwaInstall();
-  const databaseConfig = {
-    ...defaultNotionDatabaseConfig,
-    ...(notionConfig.databases || {})
-  };
+  const databaseConfig = normalizeNotionDatabaseConfigs(notionConfig);
   const configuredDatabases = Object.values(databaseConfig);
 
   function updateConfig(field, value) {
@@ -956,10 +979,10 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       ...current,
       databases: {
         ...defaultNotionDatabaseConfig,
-        ...(current.databases || {}),
+        ...normalizeNotionDatabaseConfigs(current),
         [databaseId]: {
           ...defaultNotionDatabaseConfig[databaseId],
-          ...((current.databases || {})[databaseId] || {}),
+          ...(normalizeNotionDatabaseConfigs(current)[databaseId] || {}),
           [field]: value
         }
       }
@@ -975,7 +998,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       ...current,
       databases: {
         ...defaultNotionDatabaseConfig,
-        ...(current.databases || {}),
+        ...normalizeNotionDatabaseConfigs(current),
         [id]: {
           id,
           label: name.trim(),
@@ -998,7 +1021,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
     setNotionConfig((current) => {
       const nextDatabases = {
         ...defaultNotionDatabaseConfig,
-        ...(current.databases || {})
+        ...normalizeNotionDatabaseConfigs(current)
       };
       delete nextDatabases[databaseId];
       return { ...current, databases: nextDatabases };
