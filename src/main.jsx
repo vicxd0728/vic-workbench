@@ -992,10 +992,10 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
     }));
   }
 
-  function addCustomDatabase() {
-    const name = window.prompt('輸入 Notion 資料庫名稱');
-    if (!name?.trim()) return;
+  function addCustomDatabase(sourceType = 'database') {
     const id = `custom-${Date.now()}`;
+    const customCount = configuredDatabases.filter((item) => !item.locked).length + 1;
+    const label = sourceType === 'folder' ? `自訂父頁 ${customCount}` : `自訂資料庫 ${customCount}`;
 
     setNotionConfig((current) => ({
       ...current,
@@ -1004,12 +1004,12 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
         ...normalizeNotionDatabaseConfigs(current),
         [id]: {
           id,
-          label: name.trim(),
-          sourceType: 'folder',
+          label,
+          sourceType,
           databaseId: '',
           pageUrl: '',
-          purpose: '自訂 Notion 資料庫',
-          sortMode: 'title-date-desc',
+          purpose: sourceType === 'folder' ? '父頁底下的週報、紀錄或文件整理' : 'Notion database 資料整理',
+          sortMode: sourceType === 'folder' ? 'title-date-desc' : 'updated',
           analysisLimit: 3,
           locked: false
         }
@@ -1115,7 +1115,10 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
           <strong>Notion 資料來源</strong>
           <span>下面不需要再填 Key，只要貼每個區塊要讀的 Notion 連結。</span>
         </div>
-        <button className="secondaryAction" onClick={addCustomDatabase}><Plus size={17} />新增資料來源</button>
+        <div className="databaseHeaderActions">
+          <button className="secondaryAction" onClick={() => addCustomDatabase('database')}><Plus size={17} />新增 Database</button>
+          <button className="secondaryAction" onClick={() => addCustomDatabase('folder')}><Plus size={17} />新增父頁</button>
+        </div>
       </div>
       <div className="databaseSettings">
         {configuredDatabases.map((config) => {
@@ -1195,7 +1198,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
                   ))}
                 </div>
               )}
-              {!config.locked && <button className="dangerButton" onClick={() => deleteCustomDatabase(config.id)}><Trash2 size={15} />刪除自訂資料庫</button>}
+              {!config.locked && <button className="dangerButton" onClick={() => deleteCustomDatabase(config.id)}><Trash2 size={15} />刪除這個來源</button>}
             </article>
           );
         })}
