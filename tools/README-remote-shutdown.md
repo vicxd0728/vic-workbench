@@ -21,3 +21,11 @@ The agent tries Windows ACPI thermal readings through WMI. Some desktops and lap
 ## Wake
 
 Shutdown cannot be reversed remotely after the PC is fully off. Waking from sleep or hibernate needs BIOS/NIC Wake-on-LAN support plus a LAN relay or router rule. This agent can request hibernate, but it cannot wake itself while suspended.
+
+For this PC, the practical wake design is:
+
+1. Enable Wake-on-LAN in BIOS/UEFI and in the Windows network adapter settings.
+2. Keep one sender online on the same LAN, such as a router, NAS, Raspberry Pi, or another always-on PC.
+3. Add a Cloudflare command that asks that sender to send the magic packet to this PC's MAC address.
+
+Without step 2, Cloudflare has nowhere inside the home network to send the wake packet from.

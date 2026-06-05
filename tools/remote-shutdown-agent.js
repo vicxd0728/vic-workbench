@@ -87,6 +87,18 @@ async function readWindowsTemperature() {
     return { available: false, message: 'Temperature probe is only configured for Windows.' };
   }
 
+  const probes = [readWindowsAcpiTemperature, readWindowsCounterTemperature];
+  const messages = [];
+  for (const probe of probes) {
+    const result = await probe();
+    if (result.available) return result;
+    if (result.message) messages.push(result.message);
+  }
+
+  return { available: false, message: messages.join(' | ') || 'No Windows temperature reading is available.' };
+}
+
+async function readWindowsAcpiTemperature() {
   try {
     const output = await exec('powershell.exe', [
       '-NoProfile',
@@ -101,6 +113,33 @@ async function readWindowsTemperature() {
       available: true,
       celsius: Math.round((raw / 10 - 273.15) * 10) / 10,
       source: 'MSAcpi_ThermalZoneTemperature'
+    };
+  } catch (error) {
+    return { available: false, message: error.message };
+  }
+}
+
+async function readWindowsCounterTemperature() {
+  try {
+    const output = await exec('powershell.exe', [
+      '-NoProfile',
+      '-Command',
+      "Get-Counter '\\Thermal Zone Information(*)\\Temperature' -ErrorAction Stop | Select-Object -ExpandProperty CounterSamples | Where-Object { $_.CookedValue -gt 0 } | Select-Object -ExpandProperty CookedValue"
+    ]);
+    const values = String(output)
+      .trim()
+      .split(/\s+/)
+      .map(Number)
+      .filter((value) => Number.isFinite(value) && value > 0);
+    if (!values.length) {
+      return { available: false, message: 'No thermal zone performance counter reading.' };
+    }
+    const readings = values.map((value) => Math.round((value - 273.15) * 10) / 10);
+    return {
+      available: true,
+      celsius: Math.max(...readings),
+      readings,
+      source: 'Thermal Zone Information'
     };
   } catch (error) {
     return { available: false, message: error.message };

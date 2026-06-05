@@ -6,4 +6,5 @@ dashboard-*.png
 .env
 .env.*
 .remote-*.env
+remote-agent*.log
 .DS_Store

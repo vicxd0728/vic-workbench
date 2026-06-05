@@ -20,6 +20,7 @@ import {
   ListChecks,
   Mic,
   MoreVertical,
+  Moon,
   Newspaper,
   Plus,
   Power,

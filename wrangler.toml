@@ -6,5 +6,3 @@ compatibility_date = "2026-06-04"
 [[kv_namespaces]]
 binding = "REMOTE_COMMANDS"
 id = "4b942076401d482f9e72c27f143a33f3"
-
-[env.production]
