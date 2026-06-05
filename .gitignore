@@ -5,4 +5,5 @@ lematec-erp/
 dashboard-*.png
 .env
 .env.*
+.remote-*.env
 .DS_Store

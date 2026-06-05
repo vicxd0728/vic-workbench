@@ -2159,6 +2159,217 @@ a {
   font-weight: 850;
 }
 
+.remotePowerPanel {
+  display: grid;
+  gap: 18px;
+}
+
+.remotePowerHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.remotePowerHeader h2 {
+  margin: 8px 0 6px;
+  font-size: 22px;
+}
+
+.remotePowerHeader p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.deviceBadge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.deviceBadge.online {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.deviceBadge.offline {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.deviceStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.deviceMetric {
+  min-height: 132px;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.deviceMetric svg {
+  color: var(--blue);
+}
+
+.deviceMetric span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.deviceMetric strong {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.deviceMetric small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.deviceMetric.temperature.warning {
+  border-color: rgba(217, 149, 19, 0.45);
+  background: var(--amber-soft);
+}
+
+.deviceMetric.temperature.warning svg,
+.deviceMetric.temperature.warning strong {
+  color: var(--amber);
+}
+
+.deviceMetric.temperature.critical {
+  border-color: rgba(216, 75, 69, 0.45);
+  background: var(--red-soft);
+}
+
+.deviceMetric.temperature.critical svg,
+.deviceMetric.temperature.critical strong {
+  color: var(--red);
+}
+
+.remoteNotice,
+.remoteCommandState {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.remoteNotice.warning {
+  border-color: rgba(217, 149, 19, 0.45);
+  background: var(--amber-soft);
+  color: #8a5f0d;
+}
+
+.remoteNotice.critical,
+.remoteNotice.error,
+.remoteCommandState.error {
+  border-color: rgba(216, 75, 69, 0.45);
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.remoteCommandState.ready {
+  border-color: rgba(10, 166, 110, 0.35);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.remoteCommandBox {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 150px minmax(180px, 0.8fr);
+  gap: 12px;
+}
+
+.remoteCommandBox label {
+  display: grid;
+  gap: 8px;
+}
+
+.remoteCommandBox span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.remoteCommandBox input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--text);
+}
+
+.remoteActions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.remoteActionButton {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 4px 9px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.remoteActionButton svg {
+  grid-row: 1 / span 2;
+  color: var(--blue);
+}
+
+.remoteActionButton span {
+  font-weight: 850;
+}
+
+.remoteActionButton small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.remoteActionButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(23, 105, 255, 0.45);
+  box-shadow: var(--shadow-soft);
+}
+
+.remoteActionButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.remoteActionButton.cancel svg {
+  color: var(--amber);
+}
+
 .resourceGrid a strong {
   font-size: 13px;
 }
@@ -2565,6 +2776,10 @@ body {
   .settingsTabs,
   .knowledgeOverview,
   .sourceManager,
+  .remotePowerHeader,
+  .deviceStatusGrid,
+  .remoteCommandBox,
+  .remoteActions,
   .databaseSettings.singleSource,
   .resultGrid,
   .databaseTabs,

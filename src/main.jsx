@@ -22,15 +22,20 @@ import {
   MoreVertical,
   Newspaper,
   Plus,
+  Power,
   RotateCcw,
   Search,
   Send,
   Settings,
+  ShieldAlert,
   Sparkles,
   Square,
   Star,
+  Thermometer,
   Trash2,
   Wand2,
+  Wifi,
+  WifiOff,
   Zap
 } from 'lucide-react';
 import './styles.css';
@@ -544,6 +549,7 @@ function ActiveView(props) {
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
           <PageHeader title="設定與自動化" subtitle="所有 Token、Notion、新聞來源與未來 API 設定集中在同一頁。" />
+          <RemotePowerPanel />
           <SettingsWorkspace notionConfig={notionConfig} setNotionConfig={setNotionConfig} resetDemoData={resetDemoData} />
         </div>
         <aside className="insightRail">
@@ -1401,6 +1407,172 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
     </section>
   );
 }
+
+function RemotePowerPanel() {
+  const deviceId = 'vic-windows-pc';
+  const [status, setStatus] = useState({ status: 'loading', data: null, message: '' });
+  const [secret, setSecret] = useState(() => localStorage.getItem('vic-workbench:remote-secret') || '');
+  const [confirmText, setConfirmText] = useState('');
+  const [graceSeconds, setGraceSeconds] = useState(30);
+  const [commandState, setCommandState] = useState({ status: 'idle', message: '' });
+
+  const state = status.data?.state;
+  const telemetry = state?.telemetry || {};
+  const temperature = telemetry.temperature || {};
+  const lastSeen = state?.lastSeen ? new Date(state.lastSeen) : null;
+  const isOnline = Boolean(status.data?.online);
+  const memoryPercent = telemetry.totalMemoryBytes
+    ? Math.round(((telemetry.totalMemoryBytes - telemetry.freeMemoryBytes) / telemetry.totalMemoryBytes) * 100)
+    : null;
+  const temperatureLevel = temperature.available && temperature.celsius >= 90
+    ? 'critical'
+    : temperature.available && temperature.celsius >= 80
+      ? 'warning'
+      : 'normal';
+  const temperatureText = temperature.available
+    ? `${temperature.celsius}°C`
+    : temperature.message || '尚未取得溫度';
+
+  useEffect(() => {
+    refreshStatus();
+    const timer = window.setInterval(refreshStatus, 10000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function updateSecret(value) {
+    setSecret(value);
+    localStorage.setItem('vic-workbench:remote-secret', value);
+  }
+
+  async function refreshStatus() {
+    try {
+      const response = await fetch(`/api/device/status?deviceId=${deviceId}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || '讀取電腦狀態失敗。');
+      setStatus({ status: 'ready', data, message: '' });
+    } catch (error) {
+      setStatus({ status: 'error', data: null, message: error.message || '讀取電腦狀態失敗。' });
+    }
+  }
+
+  async function sendCommand(action, confirm) {
+    setCommandState({ status: 'loading', message: '正在送出指令...' });
+    try {
+      const response = await fetch('/api/device/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret,
+          deviceId,
+          action,
+          confirm,
+          graceSeconds
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || '指令送出失敗。');
+      setCommandState({ status: 'ready', message: action === 'cancel' ? '已送出取消關機。' : '已送出指令，等待本機代理程式執行。' });
+      setConfirmText('');
+      refreshStatus();
+    } catch (error) {
+      setCommandState({ status: 'error', message: error.message || '指令送出失敗。' });
+    }
+  }
+
+  const commandButtons = [
+    { action: 'hibernate', confirm: 'HIBERNATE', label: '休眠', icon: Moon },
+    { action: 'shutdown', confirm: 'SHUTDOWN', label: '關機', icon: Power },
+    { action: 'restart', confirm: 'RESTART', label: '重開機', icon: RotateCcw }
+  ];
+
+  return (
+    <section className="panel remotePowerPanel">
+      <div className="remotePowerHeader">
+        <div>
+          <span className={`deviceBadge ${isOnline ? 'online' : 'offline'}`}>
+            {isOnline ? <Wifi size={15} /> : <WifiOff size={15} />}
+            {isOnline ? '電腦在線' : '代理未連線'}
+          </span>
+          <h2>電腦電源與溫度</h2>
+          <p>透過本機代理程式回報狀態，溫度過高時可以先休眠或關機。</p>
+        </div>
+        <button className="secondaryAction" type="button" onClick={refreshStatus}>
+          <RotateCcw size={17} /><span>重新整理</span>
+        </button>
+      </div>
+
+      <div className="deviceStatusGrid">
+        <article className={`deviceMetric temperature ${temperatureLevel}`}>
+          <Thermometer size={20} />
+          <span>溫度</span>
+          <strong>{temperatureText}</strong>
+          <small>{temperature.available ? (temperatureLevel === 'critical' ? '危險，建議立即處理' : temperatureLevel === 'warning' ? '偏高，建議觀察或休眠' : '正常') : '部分電腦不提供 ACPI 溫度'}</small>
+        </article>
+        <article className="deviceMetric">
+          <Clock3 size={20} />
+          <span>最後回報</span>
+          <strong>{lastSeen ? formatRelativeTime(lastSeen) : '尚未回報'}</strong>
+          <small>{state?.hostname || deviceId}</small>
+        </article>
+        <article className="deviceMetric">
+          <ShieldAlert size={20} />
+          <span>模式</span>
+          <strong>{state?.dryRun ? '測試模式' : '正式執行'}</strong>
+          <small>{memoryPercent !== null ? `記憶體使用約 ${memoryPercent}%` : '等待代理程式回報'}</small>
+        </article>
+      </div>
+
+      {status.status === 'error' && <div className="remoteNotice error">{status.message}</div>}
+      {temperatureLevel !== 'normal' && temperature.available && (
+        <div className={`remoteNotice ${temperatureLevel}`}>
+          {temperatureLevel === 'critical' ? '溫度已超過 90°C，建議立刻休眠或關機。' : '溫度已超過 80°C，建議先保存工作並觀察。'}
+        </div>
+      )}
+      {status.data?.pendingCommand && (
+        <div className="remoteNotice warning">目前有待執行指令：{status.data.pendingCommand.action}</div>
+      )}
+
+      <div className="remoteCommandBox">
+        <label><span>控制密鑰</span><input type="password" value={secret} onChange={(event) => updateSecret(event.target.value)} placeholder="貼上 .remote-control.env 裡的密鑰" /></label>
+        <label><span>倒數秒數</span><input type="number" min="10" max="300" value={graceSeconds} onChange={(event) => setGraceSeconds(event.target.value)} /></label>
+        <label><span>確認字</span><input value={confirmText} onChange={(event) => setConfirmText(event.target.value.toUpperCase())} placeholder="例如 SHUTDOWN" /></label>
+      </div>
+
+      <div className="remoteActions">
+        {commandButtons.map(({ action, confirm, label, icon: Icon }) => (
+          <button
+            type="button"
+            className="remoteActionButton"
+            key={action}
+            onClick={() => sendCommand(action, confirm)}
+            disabled={!secret || confirmText !== confirm || commandState.status === 'loading'}
+          >
+            <Icon size={18} /><span>{label}</span><small>{confirm}</small>
+          </button>
+        ))}
+        <button
+          type="button"
+          className="remoteActionButton cancel"
+          onClick={() => sendCommand('cancel', 'CANCEL')}
+          disabled={!secret || confirmText !== 'CANCEL' || commandState.status === 'loading'}
+        >
+          <RotateCcw size={18} /><span>取消關機</span><small>CANCEL</small>
+        </button>
+      </div>
+
+      {commandState.message && <div className={`remoteCommandState ${commandState.status}`}>{commandState.message}</div>}
+    </section>
+  );
+}
+
+function formatRelativeTime(date) {
+  const diffSeconds = Math.round((Date.now() - date.getTime()) / 1000);
+  if (diffSeconds < 5) return '剛剛';
+  if (diffSeconds < 60) return `${diffSeconds} 秒前`;
+  if (diffSeconds < 3600) return `${Math.round(diffSeconds / 60)} 分鐘前`;
+  return new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
 function PwaInstallCard({ pwaInstall }) {
   const status = pwaInstall.isStandalone ? '已用 App 模式開啟' : '可加入主畫面';
 
