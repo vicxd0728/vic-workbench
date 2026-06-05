@@ -126,7 +126,7 @@ const notionDatabaseDetails = {
 
 const defaultNotionDatabaseConfig = {
   tasks: { id: 'tasks', label: '任務資料庫', sourceType: 'database', databaseId: '', pageUrl: '', purpose: '任務同步、待辦與工作狀態', sortMode: 'updated', analysisLimit: 3, locked: true },
-  knowledge: { id: 'knowledge', label: '知識庫', sourceType: 'database', databaseId: '', pageUrl: '', purpose: '知識庫、SOP、技術筆記與決策紀錄', sortMode: 'updated', analysisLimit: 3, locked: true },
+  knowledge: { id: 'knowledge', label: '客戶分析知識庫', sourceType: 'folder', databaseId: '', pageUrl: 'https://app.notion.com/p/356ff6f424bb81d4a9a8c4a997fcffc6', purpose: '客戶分析週報、每日數據與詢盤攻堅紀錄', sortMode: 'title-date-desc', analysisLimit: 3, locked: true },
   meetings: { id: 'meetings', label: '會議筆記', sourceType: 'folder', databaseId: '', pageUrl: '', purpose: '會議逐字稿、重點摘要與決議', sortMode: 'updated', analysisLimit: 3, locked: true }
 };
 
@@ -148,11 +148,12 @@ function normalizeNotionDatabaseConfigs(notionConfig) {
     const stored = storedConfigs[key] || {};
     const id = stored.id || defaults.id || key;
     const preset = notionDatabases.find((item) => item.id === id);
+    const storedHasSource = Boolean(stored.databaseId || stored.pageUrl);
 
     configs[id] = {
       id,
       label: stored.label || defaults.label || preset?.label || '自訂資料庫',
-      sourceType: stored.sourceType || defaults.sourceType || 'database',
+      sourceType: storedHasSource ? (stored.sourceType || defaults.sourceType || 'database') : (defaults.sourceType || stored.sourceType || 'database'),
       databaseId: stored.databaseId || defaults.databaseId || '',
       pageUrl: stored.pageUrl || defaults.pageUrl || '',
       purpose: stored.purpose || defaults.purpose || preset?.purpose || '自訂 Notion 資料庫',
@@ -842,6 +843,8 @@ function NotionWorkspace({ notionConfig }) {
   const configuredDatabases = getConfiguredNotionDatabases(notionConfig);
   const defaultActive = configuredDatabases.some((item) => item.id === 'knowledge') ? 'knowledge' : configuredDatabases[0]?.id;
   const [activeDatabase, setActiveDatabase] = useState(defaultActive);
+  const [liveSummaries, setLiveSummaries] = useState({});
+  const [liveStatus, setLiveStatus] = useState({});
   const activeInfo = configuredDatabases.find((item) => item.id === activeDatabase) || configuredDatabases[0];
   const activeIsFolder = activeInfo?.sourceType === 'folder';
   const activeLink = activeInfo?.pageUrl || (activeInfo?.databaseId?.startsWith('http') ? activeInfo.databaseId : '');
@@ -859,6 +862,40 @@ function NotionWorkspace({ notionConfig }) {
   const totalItems = configuredDatabases.reduce((total, item) => total + item.count, 0);
   const totalPending = Object.values(notionDatabaseDetails).reduce((total, item) => total + item.pending, 0);
   const connectedCount = configuredDatabases.filter((item) => item.databaseId || item.pageUrl).length;
+  const activeSummaries = liveSummaries[activeInfo?.id] || activeDetail.items || [];
+  const activeLiveState = liveStatus[activeInfo?.id];
+  const activeHasSource = activeInfo?.sourceType === 'folder' ? Boolean(activeInfo?.pageUrl) : Boolean(activeInfo?.databaseId || activeInfo?.pageUrl);
+
+  async function readActiveNotionSource(source = activeInfo) {
+    if (!source) return;
+    const hasSource = source.sourceType === 'folder' ? Boolean(source.pageUrl) : Boolean(source.databaseId || source.pageUrl);
+    if (!hasSource) {
+      setLiveStatus((current) => ({ ...current, [source.id]: { status: 'error', message: '請先設定 Notion 來源連結。' } }));
+      return;
+    }
+
+    setLiveStatus((current) => ({ ...current, [source.id]: { status: 'loading', message: '正在讀取 Notion...' } }));
+
+    try {
+      const response = await fetch('/api/notion/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || 'Notion 讀取失敗。');
+
+      setLiveSummaries((current) => ({ ...current, [source.id]: data.summaries || [] }));
+      setLiveStatus((current) => ({ ...current, [source.id]: { status: 'ready', message: `已讀取 ${data.count} 個頁面。` } }));
+    } catch (error) {
+      setLiveStatus((current) => ({ ...current, [source.id]: { status: 'error', message: error.message || 'Notion 讀取失敗。' } }));
+    }
+  }
+
+  useEffect(() => {
+    if (!activeInfo || !activeHasSource || liveSummaries[activeInfo.id] || liveStatus[activeInfo.id]?.status === 'loading') return;
+    readActiveNotionSource(activeInfo);
+  }, [activeDatabase, activeHasSource]);
 
   return (
     <section className="panel notionWorkspace">
@@ -903,15 +940,22 @@ function NotionWorkspace({ notionConfig }) {
       </div>
       <div className="databaseSummary">
         <div><strong>{activeInfo.label}</strong><span>{activeInfo.status} · {activeSortLabel} · 最多分析 {activeInfo.analysisLimit} 個子頁</span></div>
-        <button><Wand2 size={16} />重新整理摘要</button>
+        <button onClick={() => readActiveNotionSource(activeInfo)} disabled={!activeHasSource || activeLiveState?.status === 'loading'}>
+          <Wand2 size={16} />{activeLiveState?.status === 'loading' ? '讀取中' : '讀取摘要'}
+        </button>
       </div>
+      {activeLiveState?.message && (
+        <div className={`sourceRunState ${activeLiveState.status || ''}`}>
+          <div><span>{activeLiveState.status === 'ready' ? '知識庫已更新' : activeLiveState.status === 'error' ? '讀取失敗' : '讀取中'}</span><p>{activeLiveState.message}</p></div>
+        </div>
+      )}
       <div className="databaseInsight">
         <BookOpen size={18} />
         <p>{activeDetail.headline}</p>
       </div>
       <div className="summaryRows">
-        {activeDetail.items.length > 0 ? (
-          activeDetail.items.map((item) => (
+        {activeSummaries.length > 0 ? (
+          activeSummaries.map((item) => (
             <article className="summaryRow" key={item.title}>
               <div><span>{activeInfo.label}</span><strong>{item.title}</strong><p>{item.summary}</p></div>
               <a href={item.url} target="_blank" rel="noreferrer" aria-label={`開啟 ${item.title}`}><ExternalLink size={16} /></a>
