@@ -839,6 +839,44 @@ function VoiceNotePanel({ addVoiceNote }) {
   );
 }
 
+function formatKnowledgeTime(value) {
+  if (!value) return '尚未讀取';
+  try {
+    return new Intl.DateTimeFormat('zh-TW', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(value));
+  } catch {
+    return '時間未知';
+  }
+}
+
+function splitSummaryHighlights(text = '') {
+  return text
+    .replace(/[#*_`]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .split(/(?:\s-\s|[。.!?？；;]\s*|\n+)/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 10)
+    .slice(0, 3);
+}
+
+function buildKnowledgeBullets(items = []) {
+  return items.flatMap((item) => {
+    const highlights = splitSummaryHighlights(item.summary);
+    return (highlights.length ? highlights : [item.summary || item.title]).map((text) => ({
+      id: `${item.id || item.title}-${text}`,
+      title: item.title,
+      sourceLabel: item.sourceLabel,
+      url: item.url,
+      time: item.lastEditedTime,
+      text
+    }));
+  });
+}
+
 function NotionWorkspace({ notionConfig }) {
   const configuredDatabases = getConfiguredNotionDatabases(notionConfig);
   const defaultActive = configuredDatabases.some((item) => item.id === 'knowledge') ? 'knowledge' : configuredDatabases[0]?.id;
@@ -865,6 +903,21 @@ function NotionWorkspace({ notionConfig }) {
   const activeSummaries = liveSummaries[activeInfo?.id] || activeDetail.items || [];
   const activeLiveState = liveStatus[activeInfo?.id];
   const activeHasSource = activeInfo?.sourceType === 'folder' ? Boolean(activeInfo?.pageUrl) : Boolean(activeInfo?.databaseId || activeInfo?.pageUrl);
+  const connectedSources = configuredDatabases.filter((item) => item.databaseId || item.pageUrl);
+  const allLiveItems = connectedSources.flatMap((source) => (liveSummaries[source.id] || []).map((item) => ({ ...item, sourceLabel: source.label, sourceId: source.id })));
+  const newestItem = [...allLiveItems].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
+  const overviewBullets = buildKnowledgeBullets(allLiveItems).slice(0, 6);
+  const sourceBriefs = connectedSources.map((source) => {
+    const items = liveSummaries[source.id] || [];
+    const latest = [...items].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
+    return {
+      ...source,
+      items,
+      latest,
+      status: liveStatus[source.id]?.status || (items.length ? 'ready' : 'idle'),
+      message: liveStatus[source.id]?.message || (items.length ? `已讀取 ${items.length} 個頁面。` : '等待讀取')
+    };
+  });
 
   async function readActiveNotionSource(source = activeInfo) {
     if (!source) return;
@@ -897,6 +950,13 @@ function NotionWorkspace({ notionConfig }) {
     readActiveNotionSource(activeInfo);
   }, [activeDatabase, activeHasSource]);
 
+  useEffect(() => {
+    connectedSources.forEach((source) => {
+      if (liveSummaries[source.id] || liveStatus[source.id]?.status === 'loading') return;
+      readActiveNotionSource(source);
+    });
+  }, [connectedSources.map((source) => `${source.id}:${source.databaseId || source.pageUrl}`).join('|')]);
+
   return (
     <section className="panel notionWorkspace">
       <div className="panelTitle"><h2>Notion Dashboard <small>{configuredDatabases.length}</small></h2><span>自訂資料庫摘要</span></div>
@@ -908,14 +968,61 @@ function NotionWorkspace({ notionConfig }) {
         </article>
         <article>
           <span>總項目</span>
-          <strong>{totalItems}</strong>
-          <p>{totalItems > 0 ? '由 Notion API 即時更新' : '尚未連接 Notion'}</p>
+          <strong>{allLiveItems.length}</strong>
+          <p>{allLiveItems.length > 0 ? '由 Notion API 即時更新' : '尚未連接 Notion'}</p>
         </article>
         <article>
           <span>待整理</span>
           <strong>{totalPending}</strong>
           <p>需要摘要或歸檔</p>
         </article>
+      </div>
+      <div className="knowledgeOverview">
+        <section className="knowledgeBrief">
+          <div className="knowledgeSectionTitle">
+            <div>
+              <strong>快速總覽</strong>
+              <span>{newestItem ? `最近更新 ${formatKnowledgeTime(newestItem.lastEditedTime)}` : '讀取後會整理跨資料庫重點'}</span>
+            </div>
+            <button onClick={() => connectedSources.forEach((source) => readActiveNotionSource(source))}>
+              <RotateCcw size={15} />重新整理
+            </button>
+          </div>
+          <div className="knowledgeBulletList">
+            {overviewBullets.length > 0 ? (
+              overviewBullets.map((item) => (
+                <a href={item.url} target="_blank" rel="noreferrer" key={item.id}>
+                  <span>{item.sourceLabel}</span>
+                  <strong>{item.text}</strong>
+                  <small>{item.title}</small>
+                </a>
+              ))
+            ) : (
+              <div className="emptyState">尚未整理出重點，請先讀取 Notion 來源。</div>
+            )}
+          </div>
+        </section>
+        <section className="sourceOverview">
+          <div className="knowledgeSectionTitle">
+            <div>
+              <strong>資料庫狀態</strong>
+              <span>按來源看更新時間與讀取狀態</span>
+            </div>
+          </div>
+          <div className="sourceOverviewList">
+            {sourceBriefs.map((source) => (
+              <button
+                className={activeDatabase === source.id ? 'activeSourceOverview' : ''}
+                key={source.id}
+                onClick={() => setActiveDatabase(source.id)}
+              >
+                <strong>{source.label}</strong>
+                <span>{source.items.length} 頁 · {source.status === 'loading' ? '讀取中' : source.status === 'ready' ? '已更新' : '待讀取'}</span>
+                <small>{source.latest ? formatKnowledgeTime(source.latest.lastEditedTime) : source.message}</small>
+              </button>
+            ))}
+          </div>
+        </section>
       </div>
       <div className="databaseCards">
         {configuredDatabases.map(({ id, label, icon: Icon, count, status, purpose, databaseId, pageUrl, sourceType, analysisLimit }) => {
