@@ -1379,6 +1379,264 @@ a {
   background: rgba(56, 189, 248, 0.055);
 }
 
+.settingsHub {
+  gap: 16px;
+}
+
+.settingsHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(20, 184, 166, 0.06)),
+    rgba(6, 15, 28, 0.42);
+}
+
+.settingsHero h2,
+.settingsHero p {
+  margin: 0;
+}
+
+.settingsHero h2 {
+  color: #f8fbff;
+  font-size: 20px;
+}
+
+.settingsHero p {
+  margin-top: 7px;
+  color: #9fb2cc;
+  line-height: 1.55;
+}
+
+.settingsHeroStats {
+  min-height: 106px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.5);
+}
+
+.settingsHeroStats span,
+.settingsHeroStats small {
+  color: #9fb2cc;
+  font-size: 12px;
+}
+
+.settingsHeroStats strong {
+  color: #7dd3fc;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.settingsTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.42);
+}
+
+.settingsTabs button {
+  min-height: 58px;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #9fb2cc;
+  text-align: left;
+}
+
+.settingsTabs button:hover,
+.settingsTabs .activeSettingsTab {
+  background: rgba(56, 189, 248, 0.1);
+  color: #f8fbff;
+}
+
+.settingsTabs strong {
+  font-size: 14px;
+}
+
+.settingsTabs span {
+  font-size: 12px;
+}
+
+.settingsPanel {
+  display: grid;
+  gap: 14px;
+}
+
+.sourceManager {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.sourceList {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.38);
+}
+
+.sourceList .databaseHeaderActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-left: 0;
+}
+
+.sourceList .secondaryAction {
+  width: 100%;
+  padding: 0 10px;
+}
+
+.sourceListItem {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #dbeafe;
+  text-align: left;
+}
+
+.sourceListItem:hover,
+.sourceListItem.activeSource {
+  border-color: rgba(125, 211, 252, 0.32);
+  background: rgba(56, 189, 248, 0.09);
+}
+
+.sourceListItem svg {
+  color: #7dd3fc;
+}
+
+.sourceListItem span,
+.sourceListItem strong,
+.sourceListItem small {
+  min-width: 0;
+  display: block;
+}
+
+.sourceListItem strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.sourceListItem small {
+  margin-top: 3px;
+  color: #9fb2cc;
+  font-size: 12px;
+}
+
+.sourceEditor {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(15, 27, 48, 0.88), rgba(9, 18, 34, 0.82));
+}
+
+.sourceEditorHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sourceEditorHeader div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sourceEditorHeader strong {
+  color: #f8fbff;
+  font-size: 16px;
+}
+
+.sourceEditorHeader span {
+  color: #9fb2cc;
+  font-size: 13px;
+}
+
+.sourceEditorHeader .primaryAction {
+  margin-left: auto;
+}
+
+.databaseSettings.singleSource {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resultCard {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.34);
+}
+
+.resultCard.ready {
+  border-color: rgba(20, 184, 166, 0.34);
+}
+
+.resultCard.error {
+  border-color: rgba(248, 113, 113, 0.34);
+}
+
+.resultCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resultCardTitle strong {
+  min-width: 0;
+  color: #f8fbff;
+}
+
+.resultCardTitle span {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.resultCard p {
+  margin: 0;
+  color: #9fb2cc;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(15, 159, 110, 0.35);
@@ -2171,6 +2429,11 @@ body {
 
   .notionSetup,
   .connectionGuide,
+  .settingsHero,
+  .settingsTabs,
+  .sourceManager,
+  .databaseSettings.singleSource,
+  .resultGrid,
   .databaseTabs,
   .newsGrid,
   .databaseCards,
@@ -2196,6 +2459,29 @@ body {
 
   .databaseHeaderActions {
     display: grid;
+  }
+
+  .sourceList .databaseHeaderActions {
+    grid-template-columns: 1fr;
+  }
+
+  .sourceList .secondaryAction,
+  .sourceEditorHeader .primaryAction,
+  .settingsActions .secondaryAction {
+    width: 100%;
+  }
+
+  .sourceList .secondaryAction span,
+  .settingsActions .secondaryAction span {
+    display: inline;
+  }
+
+  .sourceEditorHeader {
+    display: grid;
+  }
+
+  .sourceEditorHeader .primaryAction {
+    margin-left: 0;
   }
 
   .settingsSectionHeader,
