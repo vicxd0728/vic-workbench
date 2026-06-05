@@ -971,9 +971,11 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
   const databaseConfig = normalizeNotionDatabaseConfigs(notionConfig);
   const configuredDatabases = Object.values(databaseConfig);
   const [sourceRuns, setSourceRuns] = useState({});
+  const [notionConnection, setNotionConnection] = useState({ status: 'checking', connected: false });
   const [activeSettingsTab, setActiveSettingsTab] = useState('sources');
   const [activeSourceId, setActiveSourceId] = useState(configuredDatabases[0]?.id || '');
-  const hasToken = Boolean(notionConfig.token?.trim());
+  const hasLocalToken = Boolean(notionConfig.token?.trim());
+  const hasToken = hasLocalToken || notionConnection.connected;
   const activeSource = configuredDatabases.find((item) => item.id === activeSourceId) || configuredDatabases[0];
   const connectedSources = configuredDatabases.filter((item) => item.databaseId || item.pageUrl).length;
   const successfulRuns = Object.values(sourceRuns).filter((item) => item.status === 'ready').length;
@@ -983,6 +985,13 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       ? Boolean(activeSource.pageUrl)
       : Boolean(activeSource.databaseId || activeSource.pageUrl)
     : false;
+  const tokenStatusLabel = notionConnection.connected
+    ? 'Cloudflare Token 已設定'
+    : hasLocalToken
+      ? '本機 Token 已填'
+      : notionConnection.status === 'checking'
+        ? '檢查連線中'
+        : '尚未設定 Token';
 
   useEffect(() => {
     if (!configuredDatabases.length) return;
@@ -990,6 +999,30 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       setActiveSourceId(configuredDatabases[0].id);
     }
   }, [activeSourceId, configuredDatabases]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkNotionConnection() {
+      try {
+        const response = await fetch('/api/notion/summary');
+        const data = await response.json();
+        if (!isMounted) return;
+        setNotionConnection({
+          status: 'ready',
+          connected: Boolean(data.connected)
+        });
+      } catch {
+        if (!isMounted) return;
+        setNotionConnection({ status: 'error', connected: false });
+      }
+    }
+
+    checkNotionConnection();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function updateConfig(field, value) {
     setNotionConfig((current) => ({ ...current, [field]: value }));
@@ -1108,7 +1141,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
           <p>貼上 Database 或父頁連結就好，系統會自動解析 ID。新增來源、連線、讀取結果分開管理。</p>
         </div>
         <div className="settingsHeroStats">
-          <span>{hasToken ? 'Token 已填' : '尚未填 Token'}</span>
+          <span>{tokenStatusLabel}</span>
           <strong>{connectedSources}/{configuredDatabases.length}</strong>
           <small>已設定來源</small>
         </div>
@@ -1117,7 +1150,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       <div className="settingsTabs" role="tablist" aria-label="Notion settings">
         {[
           ['sources', '資料來源', `${configuredDatabases.length} 個`],
-          ['connection', '連線', hasToken ? '已填 Token' : '未連線'],
+          ['connection', '連線', tokenStatusLabel],
           ['results', '讀取結果', `${successfulRuns} 筆成功`]
         ].map(([id, label, meta]) => (
           <button type="button" className={activeSettingsTab === id ? 'activeSettingsTab' : ''} key={id} onClick={() => setActiveSettingsTab(id)}>
