@@ -1,6 +1,6 @@
 # Remote Power Agent
 
-This agent lets Vic Workbench queue shutdown, restart, hibernate, and cancel commands through Cloudflare Pages.
+This agent lets Vic Workbench queue shutdown, restart, sleep, and cancel commands through Cloudflare Pages.
 
 ## Test Mode
 
@@ -20,7 +20,7 @@ The agent tries Windows ACPI thermal readings through WMI. Some desktops and lap
 
 ## Wake
 
-Shutdown cannot be reversed remotely after the PC is fully off. Waking from sleep or hibernate needs BIOS/NIC Wake-on-LAN support plus a LAN relay or router rule. This agent can request hibernate, but it cannot wake itself while suspended.
+Shutdown cannot be reversed remotely after the PC is fully off. Waking from sleep needs BIOS/NIC Wake-on-LAN support plus a LAN relay or router rule. This agent can request sleep, but it cannot wake itself while suspended.
 
 For this PC, the practical wake design is:
 

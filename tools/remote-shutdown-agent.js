@@ -175,9 +175,13 @@ async function runCommand(command) {
       return;
     }
 
-    if (action === 'hibernate') {
-      await exec('shutdown.exe', ['/h']);
-      await acknowledge(command, 'executed', 'Hibernate requested.');
+    if (action === 'sleep') {
+      await exec('powershell.exe', [
+        '-NoProfile',
+        '-Command',
+        'Add-Type -Name Win32Power -Namespace Native -MemberDefinition \'[DllImport("powrprof.dll", SetLastError=true)] public static extern bool SetSuspendState(bool hibernate, bool forceCritical, bool disableWakeEvent);\'; [Native.Win32Power]::SetSuspendState($false, $false, $false)'
+      ]);
+      await acknowledge(command, 'executed', 'Sleep requested.');
       return;
     }
 

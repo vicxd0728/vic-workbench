@@ -730,7 +730,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
             <div><span>最後回報</span><strong>{deviceState?.lastSeen ? formatRelativeTime(new Date(deviceState.lastSeen)) : '尚未回報'}</strong></div>
           </div>
           <div className="quickPowerGrid">
-            <button onClick={() => setActiveView('automation')}><Moon size={17} /><span>休眠</span></button>
+            <button onClick={() => setActiveView('automation')}><Moon size={17} /><span>睡眠</span></button>
             <button onClick={() => setActiveView('automation')}><Power size={17} /><span>關機</span></button>
             <button onClick={() => setActiveView('automation')}><RotateCcw size={17} /><span>重開機</span></button>
           </div>
@@ -1563,7 +1563,7 @@ function RemotePowerPanel() {
   }
 
   const commandButtons = [
-    { action: 'hibernate', confirm: '休眠', label: '休眠', icon: Moon },
+    { action: 'sleep', confirm: '睡眠', label: '睡眠', icon: Moon },
     { action: 'shutdown', confirm: '關機', label: '關機', icon: Power },
     { action: 'restart', confirm: '重開機', label: '重開機', icon: RotateCcw }
   ];
@@ -1577,7 +1577,7 @@ function RemotePowerPanel() {
             {isOnline ? '電腦在線' : '代理未連線'}
           </span>
           <h2>電腦電源與溫度</h2>
-          <p>透過本機代理程式回報狀態，溫度過高時可以先休眠或關機。</p>
+          <p>透過本機代理程式回報狀態，溫度過高時可以先睡眠或關機。</p>
         </div>
         <button className="secondaryAction" type="button" onClick={refreshStatus}>
           <RotateCcw size={17} /><span>重新整理</span>
@@ -1589,7 +1589,7 @@ function RemotePowerPanel() {
           <Thermometer size={20} />
           <span>溫度</span>
           <strong>{temperatureText}</strong>
-          <small>{temperature.available ? (temperatureLevel === 'critical' ? '危險，建議立即處理' : temperatureLevel === 'warning' ? '偏高，建議觀察或休眠' : '正常') : '部分電腦不提供 ACPI 溫度'}</small>
+          <small>{temperature.available ? (temperatureLevel === 'critical' ? '危險，建議立即處理' : temperatureLevel === 'warning' ? '偏高，建議觀察或睡眠' : '正常') : '部分電腦不提供 ACPI 溫度'}</small>
         </article>
         <article className="deviceMetric">
           <Clock3 size={20} />
@@ -1608,7 +1608,7 @@ function RemotePowerPanel() {
       {status.status === 'error' && <div className="remoteNotice error">{status.message}</div>}
       {temperatureLevel !== 'normal' && temperature.available && (
         <div className={`remoteNotice ${temperatureLevel}`}>
-          {temperatureLevel === 'critical' ? '溫度已超過 90°C，建議立刻休眠或關機。' : '溫度已超過 80°C，建議先保存工作並觀察。'}
+          {temperatureLevel === 'critical' ? '溫度已超過 90°C，建議立刻睡眠或關機。' : '溫度已超過 80°C，建議先保存工作並觀察。'}
         </div>
       )}
       {status.data?.pendingCommand && (

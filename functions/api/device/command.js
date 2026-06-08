@@ -3,7 +3,7 @@ import { commandKey, getDeviceId, json, parseBody, readJson, requireKv, writeJso
 const CONFIRMATIONS = {
   shutdown: '關機',
   restart: '重開機',
-  hibernate: '休眠',
+  sleep: '睡眠',
   cancel: '取消'
 };
 
