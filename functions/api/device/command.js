@@ -1,10 +1,10 @@
 import { commandKey, getDeviceId, json, parseBody, readJson, requireKv, writeJson } from './_shared.js';
 
 const CONFIRMATIONS = {
-  shutdown: 'SHUTDOWN',
-  restart: 'RESTART',
-  hibernate: 'HIBERNATE',
-  cancel: 'CANCEL'
+  shutdown: '關機',
+  restart: '重開機',
+  hibernate: '休眠',
+  cancel: '取消'
 };
 
 export async function onRequestPost({ request, env }) {
@@ -20,8 +20,8 @@ export async function onRequestPost({ request, env }) {
       return json({ ok: false, message: 'Unsupported remote command.' }, 400);
     }
 
-    if (String(body.confirm || '').toUpperCase() !== CONFIRMATIONS[action]) {
-      return json({ ok: false, message: `Type ${CONFIRMATIONS[action]} to confirm.` }, 400);
+    if (String(body.confirm || '').trim() !== CONFIRMATIONS[action]) {
+      return json({ ok: false, message: `請輸入「${CONFIRMATIONS[action]}」確認。` }, 400);
     }
 
     const deviceId = getDeviceId(body.deviceId);

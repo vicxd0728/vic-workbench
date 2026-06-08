@@ -1481,9 +1481,9 @@ function RemotePowerPanel() {
   }
 
   const commandButtons = [
-    { action: 'hibernate', confirm: 'HIBERNATE', label: '休眠', icon: Moon },
-    { action: 'shutdown', confirm: 'SHUTDOWN', label: '關機', icon: Power },
-    { action: 'restart', confirm: 'RESTART', label: '重開機', icon: RotateCcw }
+    { action: 'hibernate', confirm: '休眠', label: '休眠', icon: Moon },
+    { action: 'shutdown', confirm: '關機', label: '關機', icon: Power },
+    { action: 'restart', confirm: '重開機', label: '重開機', icon: RotateCcw }
   ];
 
   return (
@@ -1536,7 +1536,7 @@ function RemotePowerPanel() {
       <div className="remoteCommandBox">
         <label><span>控制密鑰</span><input type="password" value={secret} onChange={(event) => updateSecret(event.target.value)} placeholder="貼上 .remote-control.env 裡的密鑰" /></label>
         <label><span>倒數秒數</span><input type="number" min="10" max="300" value={graceSeconds} onChange={(event) => setGraceSeconds(event.target.value)} /></label>
-        <label><span>確認字</span><input value={confirmText} onChange={(event) => setConfirmText(event.target.value.toUpperCase())} placeholder="例如 SHUTDOWN" /></label>
+        <label><span>確認字</span><input value={confirmText} onChange={(event) => setConfirmText(event.target.value.trim())} placeholder="例如 關機" /></label>
       </div>
 
       <div className="remoteActions">
@@ -1554,10 +1554,10 @@ function RemotePowerPanel() {
         <button
           type="button"
           className="remoteActionButton cancel"
-          onClick={() => sendCommand('cancel', 'CANCEL')}
-          disabled={!secret || confirmText !== 'CANCEL' || commandState.status === 'loading'}
+          onClick={() => sendCommand('cancel', '取消')}
+          disabled={!secret || confirmText !== '取消' || commandState.status === 'loading'}
         >
-          <RotateCcw size={18} /><span>取消關機</span><small>CANCEL</small>
+          <RotateCcw size={18} /><span>取消關機</span><small>取消</small>
         </button>
       </div>
 
