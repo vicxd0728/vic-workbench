@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   BarChart3,
@@ -339,6 +339,7 @@ function App() {
   const [lastAction, setLastAction] = useState('準備開始');
   const newsState = useNewsBriefs();
   const notionData = useNotionSources(notionConfig);
+  const erpBoard = useErpBoardSummary();
 
   useEffect(() => {
     const requestedView = new URLSearchParams(window.location.search).get('view');
@@ -585,6 +586,7 @@ function ActiveView(props) {
           projects={projects}
           setActiveView={setActiveView}
           notionData={notionData}
+          erpBoard={erpBoard}
         />
       </div>
     </section>
@@ -656,7 +658,7 @@ function PageHeader({ title, subtitle }) {
   );
 }
 
-function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData }) {
+function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData, erpBoard }) {
   const importantTasks = tasks.filter((task) => !task.done).slice(0, 3);
   const queueCount = notes.filter((note) => !note.synced).length;
   const newestSource = [...(notionData.sourceBriefs || [])].sort((a, b) => new Date(b.latest?.lastEditedTime || 0) - new Date(a.latest?.lastEditedTime || 0))[0];
@@ -666,6 +668,22 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const temperature = deviceState?.telemetry?.temperature;
   const tempValue = temperature?.available ? `${temperature.celsius}°C` : '未回報';
   const tempLevel = temperature?.available && temperature.celsius >= 90 ? '危險' : temperature?.available && temperature.celsius >= 80 ? '偏高' : '正常';
+  const erpData = erpBoard.data;
+  const erpStatusLabel = erpBoard.status === 'ready' ? '已同步' : erpBoard.status === 'loading' ? '讀取中' : '需設定';
+  const erpMetrics = [
+    ['總待處理', erpData?.totalPending ?? '--', '跨部門'],
+    ['今日出貨', erpData?.todayShip ?? '--', '出貨'],
+    ['待出貨', erpData?.waitingShip ?? '--', '出貨'],
+    ['交期逾期', erpData?.overdue ?? '--', '提醒']
+  ];
+  const erpRows = [
+    ['待領料', erpData?.waitingPick ?? '--', '訂單待轉領料'],
+    ['生產中', erpData?.inProduction ?? '--', '現場製作中'],
+    ['品管待檢', erpData?.qcPending ?? '--', '訂單與入料'],
+    ['庫存警示', erpData?.stockWarning ?? '--', '低於安全庫存'],
+    ['C端出貨中', erpData?.corderShipping ?? '--', 'C端尚未完成'],
+    ['請假待審', erpData?.leavePending ?? '--', '人員審核']
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -756,19 +774,14 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
 
         <section className="dashboardSubPanel erpPreview">
           <div className="dashboardPanelHeader">
-            <div><h2>ERP 看板預留</h2><span>日後串接你建立的 ERP 模組</span></div>
-            <button disabled>即將上線</button>
+            <div><h2>LEMATEC ERP 看板</h2><span>{erpData?.updatedAt ? `最後更新：${formatKnowledgeTime(erpData.updatedAt)}` : erpBoard.error || '等待 ERP JSON API'}</span></div>
+            <button onClick={() => erpBoard.refresh()}><RotateCcw size={15} />{erpStatusLabel}</button>
           </div>
           <div className="erpMetricGrid">
-            {[
-              ['訂單數', '--', '銷售管理'],
-              ['庫存總值', '--', '庫存管理'],
-              ['待出貨', '--', '出貨管理'],
-              ['逾期訂單', '--', '追蹤提醒']
-            ].map(([label, value, area]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{area}</small></div>)}
+            {erpMetrics.map(([label, value, area]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{area}</small></div>)}
           </div>
           <div className="erpRows">
-            {['銷售管理', '庫存管理', '出貨管理', '採購管理'].map((name) => <div key={name}><span>{name}</span><strong>等待 ERP API</strong><small>前台指標</small></div>)}
+            {erpRows.map(([label, value, area]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{area}</small></div>)}
           </div>
         </section>
       </div>
@@ -930,6 +943,30 @@ function buildKnowledgeBullets(items = []) {
       text
     }));
   });
+}
+
+function useErpBoardSummary() {
+  const [state, setState] = useState({ status: 'loading', data: null, error: '' });
+
+  const refresh = useCallback(async () => {
+    setState((current) => ({ ...current, status: 'loading', error: '' }));
+    try {
+      const response = await fetch('https://green-wave-c22f.vic-e93.workers.dev/api/board.json');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'ERP 看板 API 讀取失敗。');
+      setState({ status: 'ready', data, error: '' });
+    } catch (error) {
+      setState({ status: 'error', data: null, error: error.message || 'ERP 看板 API 讀取失敗。' });
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  return { ...state, refresh };
 }
 
 function useNotionSources(notionConfig) {
