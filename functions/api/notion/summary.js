@@ -40,6 +40,22 @@ function summarizeText(text) {
   return sentences.slice(0, 3).join('。') + (sentences.length ? '。' : '');
 }
 
+function buildHighlights(text) {
+  const cleanedLines = text
+    .split(/\n+/)
+    .map((item) => item.replace(/^[-•\d.\s]+/, '').trim())
+    .filter((item) => item.length >= 8);
+  const sentenceHighlights = text
+    .replace(/\s+/g, ' ')
+    .split(/[。！？!?；;]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 8);
+
+  return [...new Set([...cleanedLines, ...sentenceHighlights])]
+    .map((item) => item.length > 90 ? `${item.slice(0, 88)}...` : item)
+    .slice(0, 3);
+}
+
 function blockToText(block) {
   const type = block.type;
   const value = block[type];
@@ -100,6 +116,7 @@ async function readDatabase(source, token) {
       id: page.id,
       title,
       summary: summarizeText(text),
+      highlights: buildHighlights(text),
       url: page.url,
       lastEditedTime: page.last_edited_time
     };
@@ -128,7 +145,8 @@ async function readFolder(source, token) {
     const text = await getBlocksText(page.id, token);
     return {
       ...page,
-      summary: summarizeText(text)
+      summary: summarizeText(text),
+      highlights: buildHighlights(text)
     };
   }));
 }

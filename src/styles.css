@@ -319,6 +319,10 @@ a {
   align-items: start;
 }
 
+.contentGrid.commandPage {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .primaryColumn,
 .insightRail {
   display: grid;
@@ -415,6 +419,347 @@ a {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+.commandDashboard {
+  display: grid;
+  gap: 14px;
+}
+
+.statusStrip {
+  display: grid;
+  grid-template-columns: 1.35fr repeat(4, minmax(132px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.statusStrip div {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 2px 9px;
+  align-content: center;
+  padding: 12px;
+  background: #fff;
+}
+
+.statusStrip svg {
+  grid-row: 1 / span 3;
+  color: var(--blue);
+}
+
+.statusStrip span,
+.statusStrip small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.statusStrip strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.dashboardLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) 330px;
+  gap: 14px;
+  align-items: start;
+}
+
+.dashboardMainPanel,
+.dashboardSidePanel,
+.dashboardSubPanel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboardMainPanel {
+  min-height: 438px;
+}
+
+.dashboardSidePanel {
+  min-height: 438px;
+}
+
+.dashboardSubPanel {
+  min-height: 250px;
+}
+
+.dashboardPanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboardPanelHeader div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.dashboardPanelHeader h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.dashboardPanelHeader span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dashboardPanelHeader button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #334155;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dashboardPanelHeader button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.updateTable,
+.sourceStatusTable {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--line-soft);
+}
+
+.updateTableHead,
+.updateRow {
+  display: grid;
+  grid-template-columns: 110px minmax(160px, 0.7fr) 86px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.updateTableHead {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.updateRow:hover {
+  background: #fbfdff;
+}
+
+.updateRow strong,
+.updateRow p,
+.updateRow time {
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.updateRow strong {
+  color: var(--text);
+}
+
+.updateRow p,
+.updateRow time {
+  color: var(--muted);
+}
+
+.sourceTag {
+  width: fit-content;
+  max-width: 108px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.dashboardEmpty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.systemRows {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--line-soft);
+}
+
+.systemRows div {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.8fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 42px;
+  padding: 9px 10px;
+  background: #fff;
+}
+
+.systemRows span,
+.systemRows small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.systemRows strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.dangerText {
+  color: var(--red);
+}
+
+.warningText {
+  color: var(--amber);
+}
+
+.quickPowerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quickPowerGrid button {
+  min-height: 66px;
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.quickPowerGrid svg {
+  color: var(--blue);
+}
+
+.sourceStatusTable button {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 110px 64px 92px 68px;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 9px 11px;
+  background: #fff;
+  text-align: left;
+}
+
+.sourceStatusTable button:hover {
+  background: #fbfdff;
+}
+
+.sourceStatusTable strong,
+.sourceStatusTable span,
+.sourceStatusTable small,
+.sourceStatusTable em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.sourceStatusTable span,
+.sourceStatusTable small {
+  color: var(--muted);
+}
+
+.sourceStatusTable em {
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 850;
+}
+
+.erpPreview {
+  grid-column: 1 / -1;
+}
+
+.erpMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erpMetricGrid div,
+.erpRows div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.erpMetricGrid span,
+.erpMetricGrid small,
+.erpRows span,
+.erpRows small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.erpMetricGrid strong {
+  font-size: 24px;
+}
+
+.erpRows {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.erpRows strong {
+  font-size: 13px;
 }
 
 .overviewCard {
@@ -525,6 +870,97 @@ a {
   border-radius: 9px;
   background: var(--blue-soft);
   color: #1e3a8a;
+}
+
+.notionDigestList {
+  display: grid;
+  gap: 8px;
+}
+
+.notionDigestList a {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: start;
+  padding: 10px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.notionDigestList a span {
+  width: fit-content;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.notionDigestList a strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.notionDigestList a small {
+  grid-column: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.overviewMeta {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.sourcePillList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sourcePillList button {
+  display: grid;
+  gap: 5px;
+  min-height: 76px;
+  padding: 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+}
+
+.sourcePillList button:hover {
+  border-color: rgba(23, 105, 255, 0.34);
+  box-shadow: var(--shadow-soft);
+}
+
+.sourcePillList strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.sourcePillList span,
+.sourcePillList small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .miniList {
@@ -2589,9 +3025,99 @@ body {
   background: rgba(56, 189, 248, 0.08);
 }
 
+.statusStrip,
+.updateTable,
+.sourceStatusTable,
+.systemRows {
+  border-color: rgba(125, 166, 217, 0.22);
+  background: rgba(125, 166, 217, 0.18);
+}
+
+.statusStrip div,
+.dashboardMainPanel,
+.dashboardSidePanel,
+.dashboardSubPanel,
+.updateTableHead,
+.updateRow,
+.systemRows div,
+.sourceStatusTable button,
+.erpMetricGrid div,
+.erpRows div {
+  background: linear-gradient(180deg, rgba(15, 27, 48, 0.9), rgba(9, 18, 34, 0.84));
+  border-color: rgba(125, 166, 217, 0.2);
+  color: #e5f0ff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.035) inset, 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.dashboardPanelHeader h2,
+.updateRow strong,
+.systemRows strong,
+.sourceStatusTable strong,
+.erpMetricGrid strong,
+.erpRows strong,
+.statusStrip strong {
+  color: #f8fbff;
+}
+
+.dashboardPanelHeader span,
+.updateTableHead,
+.updateRow p,
+.updateRow time,
+.systemRows span,
+.systemRows small,
+.sourceStatusTable span,
+.sourceStatusTable small,
+.erpMetricGrid span,
+.erpMetricGrid small,
+.erpRows span,
+.erpRows small,
+.statusStrip span,
+.statusStrip small {
+  color: #9fb2cc;
+}
+
+.dashboardPanelHeader button,
+.quickPowerGrid button {
+  border-color: rgba(125, 166, 217, 0.22);
+  background: rgba(6, 15, 28, 0.48);
+  color: #dbeafe;
+}
+
+.updateRow:hover,
+.sourceStatusTable button:hover,
+.quickPowerGrid button:hover {
+  border-color: rgba(125, 211, 252, 0.42);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.sourceTag,
+.sourceStatusTable em {
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+}
+
+.dashboardEmpty {
+  background: rgba(6, 15, 28, 0.46);
+  color: #9fb2cc;
+}
+
 @media (max-width: 1240px) {
   .workspace {
     grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .dashboardLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboardSidePanel,
+  .dashboardSubPanel,
+  .erpPreview {
+    grid-column: auto;
+  }
+
+  .statusStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .brand {
@@ -2716,6 +3242,36 @@ body {
 
   .overviewCard.wide {
     grid-column: auto;
+  }
+
+  .statusStrip,
+  .erpMetricGrid,
+  .erpRows,
+  .quickPowerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .updateTableHead {
+    display: none;
+  }
+
+  .updateRow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .updateRow time {
+    order: 3;
+  }
+
+  .sourceStatusTable button,
+  .systemRows div {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .sourceTag {
+    max-width: 100%;
   }
 
   .overviewCard {

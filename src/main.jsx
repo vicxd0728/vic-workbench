@@ -58,7 +58,7 @@ const storageKeys = {
 
 const navItems = [
   { id: 'today', label: '總覽', icon: Home },
-  { id: 'inbox', label: '收件匣', icon: Inbox },
+  { id: 'inbox', label: '快速紀錄', icon: Inbox },
   { id: 'projects', label: '專案', icon: FolderKanban },
   { id: 'knowledge', label: 'Notion / 知識庫', icon: BookOpen },
   { id: 'news', label: '新聞情報', icon: Newspaper },
@@ -338,6 +338,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [lastAction, setLastAction] = useState('準備開始');
   const newsState = useNewsBriefs();
+  const notionData = useNotionSources(notionConfig);
 
   useEffect(() => {
     const requestedView = new URLSearchParams(window.location.search).get('view');
@@ -368,20 +369,20 @@ function App() {
 
     if (captureType === 'task') {
       setTasks((current) => [
-        { id: Date.now(), title, area: '收件匣', stage: 'today', estimate: '15 分', done: false, important: false },
+        { id: Date.now(), title, area: '快速紀錄', stage: 'today', estimate: '15 分', done: false, important: false },
         ...current
       ]);
       setLastAction('已新增到今日任務');
     } else {
       setNotes((current) => [{ id: Date.now(), title, type: captureType, time: '剛剛', synced: false }, ...current]);
-      setLastAction('已加入知識收件匣');
+      setLastAction('已加入知識暫存');
     }
     setDraft('');
   }
 
   function addVoiceNote(note) {
     setNotes((current) => [note, ...current]);
-    setLastAction('語音筆記已加入收件匣');
+    setLastAction('語音筆記已加入快速紀錄');
   }
 
   function toggleTask(id) {
@@ -436,6 +437,7 @@ function App() {
           projects={projects}
           setProjects={setProjects}
           notionConfig={notionConfig}
+          notionData={notionData}
           setNotionConfig={setNotionConfig}
           captureType={captureType}
           setCaptureType={setCaptureType}
@@ -466,6 +468,7 @@ function ActiveView(props) {
     projects,
     setProjects,
     notionConfig,
+    notionData,
     setNotionConfig,
     captureType,
     setCaptureType,
@@ -487,7 +490,7 @@ function ActiveView(props) {
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
           <PageHeader title="Notion / 知識庫" subtitle="分層查看不同資料庫的摘要，需要細節時再點進 Notion 原頁。" />
-          <NotionWorkspace notionConfig={notionConfig} />
+          <NotionWorkspace notionConfig={notionConfig} notionData={notionData} />
         </div>
         <aside className="insightRail">
           <NotionPanel notes={notes} syncNote={syncNote} />
@@ -501,7 +504,7 @@ function ActiveView(props) {
     return (
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
-          <PageHeader title="收件匣" subtitle="快速收集想法、語音逐字稿、待整理連結，之後再送到 Notion。" />
+          <PageHeader title="快速紀錄" subtitle="快速收集想法、語音逐字稿、待整理連結，之後再送到 Notion。" />
           <CapturePanel {...{ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction }} />
           <VoiceNotePanel addVoiceNote={addVoiceNote} />
           <KnowledgePanel notes={notes} expanded />
@@ -562,7 +565,7 @@ function ActiveView(props) {
   }
 
   return (
-    <section className="contentGrid dashboardPage">
+    <section className="contentGrid dashboardPage commandPage">
       <div className="primaryColumn">
         <section className="welcomeBand compactWelcome">
           <div>
@@ -581,13 +584,9 @@ function ActiveView(props) {
           notes={notes}
           projects={projects}
           setActiveView={setActiveView}
+          notionData={notionData}
         />
       </div>
-      <aside className="insightRail">
-        <FocusPanel stats={stats} />
-        <MiniSummary title="Notion 重點" action="看更多" onClick={() => setActiveView('knowledge')} items={notionHighlights.slice(0, 2)} />
-        <MiniNews onClick={() => setActiveView('news')} newsState={newsState} />
-      </aside>
     </section>
   );
 }
@@ -657,73 +656,122 @@ function PageHeader({ title, subtitle }) {
   );
 }
 
-function DashboardOverview({ stats, tasks, notes, projects, setActiveView }) {
+function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData }) {
   const importantTasks = tasks.filter((task) => !task.done).slice(0, 3);
   const queueCount = notes.filter((note) => !note.synced).length;
-  const topProject = projects[0];
+  const newestSource = [...(notionData.sourceBriefs || [])].sort((a, b) => new Date(b.latest?.lastEditedTime || 0) - new Date(a.latest?.lastEditedTime || 0))[0];
+  const topBullets = notionData.overviewBullets.slice(0, 6);
+  const [deviceStatus, setDeviceStatus] = useState({ status: 'loading', data: null });
+  const deviceState = deviceStatus.data?.state;
+  const temperature = deviceState?.telemetry?.temperature;
+  const tempValue = temperature?.available ? `${temperature.celsius}°C` : '未回報';
+  const tempLevel = temperature?.available && temperature.celsius >= 90 ? '危險' : temperature?.available && temperature.celsius >= 80 ? '偏高' : '正常';
+
+  useEffect(() => {
+    let isMounted = true;
+    async function refreshDevice() {
+      try {
+        const response = await fetch('/api/device/status?deviceId=vic-windows-pc');
+        const data = await response.json();
+        if (!isMounted) return;
+        setDeviceStatus({ status: 'ready', data });
+      } catch {
+        if (!isMounted) return;
+        setDeviceStatus({ status: 'error', data: null });
+      }
+    }
+    refreshDevice();
+    const timer = window.setInterval(refreshDevice, 15000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   return (
-    <section className="overviewGrid">
-      <article className="overviewCard wide">
-        <div className="cardTitle">
-          <h2>需要注意</h2>
-          <button onClick={() => setActiveView('projects')}>看任務 <ChevronRight size={15} /></button>
-        </div>
-        <div className="priorityList">
-          {importantTasks.length > 0 ? (
-            importantTasks.map((task) => (
-              <div key={task.id}>
-                <CheckSquare size={16} />
-                <strong>{task.title}</strong>
-                <span>{task.area} · {stageLabels[task.stage]}</span>
-              </div>
-            ))
-          ) : (
-            <div>
-              <CheckSquare size={16} />
-              <strong>目前沒有任務</strong>
-              <span>到收件匣新增第一筆任務</span>
-            </div>
-          )}
-        </div>
-      </article>
-      <article className="overviewCard">
-        <h2>Notion 佇列</h2>
-        <strong className="bigNumber">{queueCount}</strong>
-        <p>待同步或待整理資料</p>
-        <button onClick={() => setActiveView('knowledge')}>看摘要</button>
-      </article>
-      <article className="overviewCard">
-        <h2>主要專案</h2>
-        {topProject ? (
-          <>
-            <strong>{topProject.name}</strong>
-            <div className="progress"><b style={{ width: `${topProject.progress}%` }} /></div>
-            <p>{topProject.progress}% · {topProject.status}</p>
-          </>
-        ) : (
-          <>
-            <strong>尚未建立專案</strong>
-            <div className="progress"><b style={{ width: '0%' }} /></div>
-            <p>到專案頁建立你的第一個專案</p>
-          </>
-        )}
-      </article>
-      <article className="overviewCard wide">
-        <div className="cardTitle">
-          <h2>新聞快訊</h2>
-          <button onClick={() => setActiveView('news')}>看更多 <ChevronRight size={15} /></button>
-        </div>
-        <div className="briefLine">
-          <Newspaper size={18} />
-          <span>國際、金融、供應鏈未來會由 API 自動更新，首頁只保留最高優先摘要。</span>
-        </div>
-      </article>
-      <article className="overviewCard">
-        <h2>完成度</h2>
-        <strong className="bigNumber">{stats.progress}%</strong>
-        <p>{stats.completed} 已完成 / {stats.open} 未完成</p>
-      </article>
+    <section className="commandDashboard">
+      <div className="statusStrip">
+        <div><Clock3 size={18} /><span>今天</span><strong>{todayLabel}</strong></div>
+        <div><BookOpen size={18} /><span>Notion</span><strong>{notionData.allLiveItems.length ? '已同步' : '讀取中'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '等待資料'}</small></div>
+        <div><Wifi size={18} /><span>遠端電腦</span><strong>{deviceStatus.data?.online ? '在線' : '離線'}</strong><small>{deviceState?.hostname || 'vic-windows-pc'}</small></div>
+        <div><Thermometer size={18} /><span>溫度</span><strong>{tempValue}</strong><small>{tempLevel}</small></div>
+        <div><Inbox size={18} /><span>待整理</span><strong>{queueCount} 筆</strong></div>
+      </div>
+
+      <div className="dashboardLayout">
+        <section className="dashboardMainPanel">
+          <div className="dashboardPanelHeader">
+            <div><h2>今日總覽</h2><span>{newestSource?.latest ? `最新來源：${newestSource.label}` : '等待 Notion 更新'}</span></div>
+            <button onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新整理</button>
+          </div>
+          <div className="updateTable">
+            <div className="updateTableHead"><span>來源</span><span>標題</span><span>更新</span><span>重點摘要</span></div>
+            {topBullets.length > 0 ? topBullets.map((item) => (
+              <a className="updateRow" href={item.url} target="_blank" rel="noreferrer" key={item.id}>
+                <span className="sourceTag">{item.sourceLabel}</span>
+                <strong>{item.title}</strong>
+                <time>{formatKnowledgeTime(item.time)}</time>
+                <p>{item.text}</p>
+              </a>
+            )) : (
+              <div className="dashboardEmpty"><BookOpen size={18} />正在讀取 Notion；若一直沒有資料，請確認來源頁面已分享給 integration。</div>
+            )}
+          </div>
+        </section>
+
+        <aside className="dashboardSidePanel">
+          <div className="dashboardPanelHeader compact">
+            <div><h2>系統狀態</h2><span>{deviceStatus.data?.online ? '代理在線' : '等待代理回報'}</span></div>
+          </div>
+          <div className="systemRows">
+            <div><span>主機</span><strong>{deviceState?.hostname || 'VICXD-Z13'}</strong></div>
+            <div><span>CPU 溫度</span><strong className={tempLevel === '危險' ? 'dangerText' : tempLevel === '偏高' ? 'warningText' : ''}>{tempValue}</strong><small>{tempLevel}</small></div>
+            <div><span>模式</span><strong>{deviceState?.dryRun ? '測試模式' : '正式執行'}</strong></div>
+            <div><span>最後回報</span><strong>{deviceState?.lastSeen ? formatRelativeTime(new Date(deviceState.lastSeen)) : '尚未回報'}</strong></div>
+          </div>
+          <div className="quickPowerGrid">
+            <button onClick={() => setActiveView('automation')}><Moon size={17} /><span>休眠</span></button>
+            <button onClick={() => setActiveView('automation')}><Power size={17} /><span>關機</span></button>
+            <button onClick={() => setActiveView('automation')}><RotateCcw size={17} /><span>重開機</span></button>
+          </div>
+        </aside>
+
+        <section className="dashboardSubPanel">
+          <div className="dashboardPanelHeader">
+            <div><h2>資料來源狀態</h2><span>Notion database / 父頁更新概況</span></div>
+            <button onClick={() => setActiveView('knowledge')}>管理來源 <ChevronRight size={15} /></button>
+          </div>
+          <div className="sourceStatusTable">
+            {notionData.sourceBriefs.length > 0 ? notionData.sourceBriefs.map((source) => (
+              <button key={source.id} onClick={() => setActiveView('knowledge')}>
+                <strong>{source.label}</strong>
+                <span>{source.sourceType === 'folder' ? '父頁資料夾' : 'Database'}</span>
+                <span>{source.items.length} 頁</span>
+                <small>{source.latest ? formatKnowledgeTime(source.latest.lastEditedTime) : source.message}</small>
+                <em>{source.status === 'ready' ? '正常' : source.status === 'loading' ? '讀取中' : '待讀取'}</em>
+              </button>
+            )) : <div className="dashboardEmpty">尚未設定 Notion 資料來源。</div>}
+          </div>
+        </section>
+
+        <section className="dashboardSubPanel erpPreview">
+          <div className="dashboardPanelHeader">
+            <div><h2>ERP 看板預留</h2><span>日後串接你建立的 ERP 模組</span></div>
+            <button disabled>即將上線</button>
+          </div>
+          <div className="erpMetricGrid">
+            {[
+              ['訂單數', '--', '銷售管理'],
+              ['庫存總值', '--', '庫存管理'],
+              ['待出貨', '--', '出貨管理'],
+              ['逾期訂單', '--', '追蹤提醒']
+            ].map(([label, value, area]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{area}</small></div>)}
+          </div>
+          <div className="erpRows">
+            {['銷售管理', '庫存管理', '出貨管理', '採購管理'].map((name) => <div key={name}><span>{name}</span><strong>等待 ERP API</strong><small>前台指標</small></div>)}
+          </div>
+        </section>
+      </div>
     </section>
   );
 }
@@ -872,7 +920,7 @@ function splitSummaryHighlights(text = '') {
 
 function buildKnowledgeBullets(items = []) {
   return items.flatMap((item) => {
-    const highlights = splitSummaryHighlights(item.summary);
+    const highlights = item.highlights?.length ? item.highlights : splitSummaryHighlights(item.summary);
     return (highlights.length ? highlights : [item.summary || item.title]).map((text) => ({
       id: `${item.id || item.title}-${text}`,
       title: item.title,
@@ -884,49 +932,16 @@ function buildKnowledgeBullets(items = []) {
   });
 }
 
-function NotionWorkspace({ notionConfig }) {
+function useNotionSources(notionConfig) {
   const configuredDatabases = getConfiguredNotionDatabases(notionConfig);
-  const defaultActive = configuredDatabases.some((item) => item.id === 'knowledge') ? 'knowledge' : configuredDatabases[0]?.id;
-  const [activeDatabase, setActiveDatabase] = useState(defaultActive);
   const [liveSummaries, setLiveSummaries] = useState({});
   const [liveStatus, setLiveStatus] = useState({});
-  const activeInfo = configuredDatabases.find((item) => item.id === activeDatabase) || configuredDatabases[0];
-  const activeIsFolder = activeInfo?.sourceType === 'folder';
-  const activeLink = activeInfo?.pageUrl || (activeInfo?.databaseId?.startsWith('http') ? activeInfo.databaseId : '');
-  const activeSortLabel = notionSortOptions.find((item) => item.value === activeInfo?.sortMode)?.label || '最近更新優先';
-  const activeDetail = notionDatabaseDetails[activeDatabase] || {
-    headline: activeIsFolder
-      ? '這個父頁已設定，接上 Notion API 後會讀取子頁、排序，並摘要最新報告。'
-      : activeInfo?.databaseId
-        ? '這個自訂資料庫已設定，接上 Notion API 後會顯示摘要。'
-        : '尚未設定這個資料庫的 Notion 連結。',
-    pending: 0,
-    updatedAt: activeInfo?.databaseId || activeInfo?.pageUrl ? '已設定' : '尚未連接',
-    items: []
-  };
-  const totalItems = configuredDatabases.reduce((total, item) => total + item.count, 0);
-  const totalPending = Object.values(notionDatabaseDetails).reduce((total, item) => total + item.pending, 0);
-  const connectedCount = configuredDatabases.filter((item) => item.databaseId || item.pageUrl).length;
-  const activeSummaries = liveSummaries[activeInfo?.id] || activeDetail.items || [];
-  const activeLiveState = liveStatus[activeInfo?.id];
-  const activeHasSource = activeInfo?.sourceType === 'folder' ? Boolean(activeInfo?.pageUrl) : Boolean(activeInfo?.databaseId || activeInfo?.pageUrl);
-  const connectedSources = configuredDatabases.filter((item) => item.databaseId || item.pageUrl);
-  const allLiveItems = connectedSources.flatMap((source) => (liveSummaries[source.id] || []).map((item) => ({ ...item, sourceLabel: source.label, sourceId: source.id })));
-  const newestItem = [...allLiveItems].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
-  const overviewBullets = buildKnowledgeBullets(allLiveItems).slice(0, 6);
-  const sourceBriefs = connectedSources.map((source) => {
-    const items = liveSummaries[source.id] || [];
-    const latest = [...items].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
-    return {
-      ...source,
-      items,
-      latest,
-      status: liveStatus[source.id]?.status || (items.length ? 'ready' : 'idle'),
-      message: liveStatus[source.id]?.message || (items.length ? `已讀取 ${items.length} 個頁面。` : '等待讀取')
-    };
-  });
+  const connectedSources = useMemo(
+    () => configuredDatabases.filter((item) => item.databaseId || item.pageUrl),
+    [configuredDatabases.map((source) => `${source.id}:${source.databaseId || source.pageUrl}:${source.analysisLimit}:${source.sortMode}`).join('|')]
+  );
 
-  async function readActiveNotionSource(source = activeInfo) {
+  async function readNotionSource(source) {
     if (!source) return;
     const hasSource = source.sourceType === 'folder' ? Boolean(source.pageUrl) : Boolean(source.databaseId || source.pageUrl);
     if (!hasSource) {
@@ -946,23 +961,90 @@ function NotionWorkspace({ notionConfig }) {
       if (!response.ok || !data.ok) throw new Error(data.message || 'Notion 讀取失敗。');
 
       setLiveSummaries((current) => ({ ...current, [source.id]: data.summaries || [] }));
-      setLiveStatus((current) => ({ ...current, [source.id]: { status: 'ready', message: `已讀取 ${data.count} 個頁面。` } }));
+      setLiveStatus((current) => ({
+        ...current,
+        [source.id]: {
+          status: 'ready',
+          message: `已讀取 ${data.count} 個頁面。`,
+          updatedAt: new Date().toISOString()
+        }
+      }));
     } catch (error) {
       setLiveStatus((current) => ({ ...current, [source.id]: { status: 'error', message: error.message || 'Notion 讀取失敗。' } }));
     }
   }
 
   useEffect(() => {
-    if (!activeInfo || !activeHasSource || liveSummaries[activeInfo.id] || liveStatus[activeInfo.id]?.status === 'loading') return;
-    readActiveNotionSource(activeInfo);
-  }, [activeDatabase, activeHasSource]);
-
-  useEffect(() => {
     connectedSources.forEach((source) => {
       if (liveSummaries[source.id] || liveStatus[source.id]?.status === 'loading') return;
-      readActiveNotionSource(source);
+      readNotionSource(source);
     });
   }, [connectedSources.map((source) => `${source.id}:${source.databaseId || source.pageUrl}`).join('|')]);
+
+  const allLiveItems = connectedSources.flatMap((source) => (liveSummaries[source.id] || []).map((item) => ({ ...item, sourceLabel: source.label, sourceId: source.id })));
+  const newestItem = [...allLiveItems].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
+  const overviewBullets = buildKnowledgeBullets(allLiveItems).slice(0, 8);
+  const sourceBriefs = connectedSources.map((source) => {
+    const items = liveSummaries[source.id] || [];
+    const latest = [...items].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
+    return {
+      ...source,
+      items,
+      latest,
+      status: liveStatus[source.id]?.status || (items.length ? 'ready' : 'idle'),
+      message: liveStatus[source.id]?.message || (items.length ? `已讀取 ${items.length} 個頁面。` : '等待讀取')
+    };
+  });
+
+  return {
+    configuredDatabases,
+    connectedSources,
+    liveSummaries,
+    liveStatus,
+    allLiveItems,
+    newestItem,
+    overviewBullets,
+    sourceBriefs,
+    readNotionSource,
+    refreshAll: () => connectedSources.forEach((source) => readNotionSource(source))
+  };
+}
+
+function NotionWorkspace({ notionConfig, notionData }) {
+  const configuredDatabases = notionData.configuredDatabases;
+  const defaultActive = configuredDatabases.some((item) => item.id === 'knowledge') ? 'knowledge' : configuredDatabases[0]?.id;
+  const [activeDatabase, setActiveDatabase] = useState(defaultActive);
+  const activeInfo = configuredDatabases.find((item) => item.id === activeDatabase) || configuredDatabases[0];
+  const activeIsFolder = activeInfo?.sourceType === 'folder';
+  const activeLink = activeInfo?.pageUrl || (activeInfo?.databaseId?.startsWith('http') ? activeInfo.databaseId : '');
+  const activeSortLabel = notionSortOptions.find((item) => item.value === activeInfo?.sortMode)?.label || '最近更新優先';
+  const activeDetail = notionDatabaseDetails[activeDatabase] || {
+    headline: activeIsFolder
+      ? '這個父頁已設定，接上 Notion API 後會讀取子頁、排序，並摘要最新報告。'
+      : activeInfo?.databaseId
+        ? '這個自訂資料庫已設定，接上 Notion API 後會顯示摘要。'
+        : '尚未設定這個資料庫的 Notion 連結。',
+    pending: 0,
+    updatedAt: activeInfo?.databaseId || activeInfo?.pageUrl ? '已設定' : '尚未連接',
+    items: []
+  };
+  const totalItems = configuredDatabases.reduce((total, item) => total + item.count, 0);
+  const totalPending = Object.values(notionDatabaseDetails).reduce((total, item) => total + item.pending, 0);
+  const connectedCount = configuredDatabases.filter((item) => item.databaseId || item.pageUrl).length;
+  const activeSummaries = notionData.liveSummaries[activeInfo?.id] || activeDetail.items || [];
+  const activeLiveState = notionData.liveStatus[activeInfo?.id];
+  const activeHasSource = activeInfo?.sourceType === 'folder' ? Boolean(activeInfo?.pageUrl) : Boolean(activeInfo?.databaseId || activeInfo?.pageUrl);
+  const connectedSources = notionData.connectedSources;
+  const allLiveItems = notionData.allLiveItems;
+  const newestItem = notionData.newestItem;
+  const overviewBullets = notionData.overviewBullets.slice(0, 6);
+  const sourceBriefs = notionData.sourceBriefs;
+  const readActiveNotionSource = (source = activeInfo) => notionData.readNotionSource(source);
+
+  useEffect(() => {
+    if (!activeInfo || !activeHasSource || notionData.liveSummaries[activeInfo.id] || notionData.liveStatus[activeInfo.id]?.status === 'loading') return;
+    readActiveNotionSource(activeInfo);
+  }, [activeDatabase, activeHasSource]);
 
   return (
     <section className="panel notionWorkspace">
@@ -1741,15 +1823,15 @@ function AutomationPanel({ resetDemoData }) {
   );
 }
 
-function MiniSummary({ title, action, onClick, items }) {
+function MiniSummary({ title, action, onClick, items, sourceBriefs = [] }) {
   return (
     <section className="panel">
       <div className="railTitle"><h2>{title}</h2><button onClick={onClick}>{action}</button></div>
       <div className="miniList">
         {items.length > 0 ? (
-          items.map((item) => <article key={item.title}><strong>{item.title}</strong><p>{item.summary}</p></article>)
+          items.map((item) => <article key={item.id || item.title}><strong>{item.sourceLabel || item.title}</strong><p>{item.text || item.summary}</p></article>)
         ) : (
-          <article><strong>尚未連接 Notion</strong><p>到設定頁貼上 Notion 資料來源連結後，這裡會顯示真正摘要。</p></article>
+          <article><strong>{sourceBriefs.length ? '正在整理 Notion' : '尚未連接 Notion'}</strong><p>{sourceBriefs.length ? '來源已設定，讀取完成後這裡會顯示重點。' : '到設定頁貼上 Notion 資料來源連結後，這裡會顯示真正摘要。'}</p></article>
         )}
       </div>
     </section>
