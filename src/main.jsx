@@ -453,6 +453,7 @@ function App() {
           syncNote={syncNote}
           resetDemoData={clearLocalData}
           newsState={newsState}
+          erpBoard={erpBoard}
         />
       </main>
     </div>
@@ -483,7 +484,8 @@ function ActiveView(props) {
     deleteTask,
     syncNote,
     resetDemoData,
-    newsState
+    newsState,
+    erpBoard
   } = props;
 
   if (activeView === 'knowledge') {
