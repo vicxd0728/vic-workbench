@@ -176,12 +176,16 @@ async function runCommand(command) {
     }
 
     if (action === 'sleep') {
+      const wakeAfterMinutes = Math.min(480, Math.max(0, Number(command.wakeAfterMinutes || 0)));
+      if (wakeAfterMinutes > 0) {
+        await scheduleWakeTimer(wakeAfterMinutes);
+      }
       await exec('powershell.exe', [
         '-NoProfile',
         '-Command',
         'Add-Type -Name Win32Power -Namespace Native -MemberDefinition \'[DllImport("powrprof.dll", SetLastError=true)] public static extern bool SetSuspendState(bool hibernate, bool forceCritical, bool disableWakeEvent);\'; [Native.Win32Power]::SetSuspendState($false, $false, $false)'
       ]);
-      await acknowledge(command, 'executed', 'Sleep requested.');
+      await acknowledge(command, 'executed', wakeAfterMinutes > 0 ? `Sleep requested. Wake timer set for ${wakeAfterMinutes} minutes.` : 'Sleep requested.');
       return;
     }
 
@@ -189,6 +193,18 @@ async function runCommand(command) {
   } catch (error) {
     await acknowledge(command, 'failed', error.message);
   }
+}
+
+async function scheduleWakeTimer(minutes) {
+  const script = [
+    `$runAt = (Get-Date).AddMinutes(${minutes})`,
+    `$action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c exit'`,
+    `$trigger = New-ScheduledTaskTrigger -Once -At $runAt`,
+    `$settings = New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries`,
+    `Register-ScheduledTask -TaskName 'VicWorkbenchWake' -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null`
+  ].join('; ');
+
+  await exec('powershell.exe', ['-NoProfile', '-Command', script]);
 }
 
 async function acknowledge(command, status, message) {

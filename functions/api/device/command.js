@@ -42,12 +42,16 @@ export async function onRequestPost({ request, env }) {
     }
 
     const graceSeconds = Math.min(300, Math.max(10, Number(body.graceSeconds || 30)));
+    const wakeAfterMinutes = action === 'sleep'
+      ? Math.min(480, Math.max(0, Number(body.wakeAfterMinutes || 0)))
+      : 0;
     const command = {
       id: crypto.randomUUID(),
       action,
       status: 'pending',
       createdAt: new Date().toISOString(),
-      graceSeconds
+      graceSeconds,
+      wakeAfterMinutes
     };
     await writeJson(kv, key, command, { expirationTtl: 900 });
     return json({ ok: true, command });

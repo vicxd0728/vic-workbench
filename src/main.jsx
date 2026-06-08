@@ -1497,6 +1497,7 @@ function RemotePowerPanel() {
   const [secret, setSecret] = useState(() => localStorage.getItem('vic-workbench:remote-secret') || '');
   const [confirmText, setConfirmText] = useState('');
   const [graceSeconds, setGraceSeconds] = useState(30);
+  const [wakeAfterMinutes, setWakeAfterMinutes] = useState(30);
   const [commandState, setCommandState] = useState({ status: 'idle', message: '' });
 
   const state = status.data?.state;
@@ -1549,7 +1550,8 @@ function RemotePowerPanel() {
           deviceId,
           action,
           confirm,
-          graceSeconds
+          graceSeconds,
+          wakeAfterMinutes: action === 'sleep' ? wakeAfterMinutes : 0
         })
       });
       const data = await response.json();
@@ -1618,6 +1620,7 @@ function RemotePowerPanel() {
       <div className="remoteCommandBox">
         <label><span>控制密鑰</span><input type="password" value={secret} onChange={(event) => updateSecret(event.target.value)} placeholder="貼上 .remote-control.env 裡的密鑰" /></label>
         <label><span>倒數秒數</span><input type="number" min="10" max="300" value={graceSeconds} onChange={(event) => setGraceSeconds(event.target.value)} /></label>
+        <label><span>睡眠後喚醒</span><select value={String(wakeAfterMinutes)} onChange={(event) => setWakeAfterMinutes(Number(event.target.value))}><option value="0">不自動喚醒</option><option value="15">15 分鐘</option><option value="30">30 分鐘</option><option value="60">60 分鐘</option><option value="120">2 小時</option></select></label>
         <label><span>確認字</span><input value={confirmText} onChange={(event) => setConfirmText(event.target.value.trim())} placeholder="例如 關機" /></label>
       </div>
 

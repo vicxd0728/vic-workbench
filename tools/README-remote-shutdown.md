@@ -1,6 +1,7 @@
 # Remote Power Agent
 
 This agent lets Vic Workbench queue shutdown, restart, sleep, and cancel commands through Cloudflare Pages.
+Sleep commands can optionally create a Windows wake timer before sleeping, such as waking again after 15, 30, or 60 minutes.
 
 ## Test Mode
 
@@ -22,7 +23,7 @@ The agent tries Windows ACPI thermal readings through WMI. Some desktops and lap
 
 Shutdown cannot be reversed remotely after the PC is fully off. Waking from sleep needs BIOS/NIC Wake-on-LAN support plus a LAN relay or router rule. This agent can request sleep, but it cannot wake itself while suspended.
 
-For this PC, the practical wake design is:
+For remote on-demand wake, the practical design is:
 
 1. Enable Wake-on-LAN in BIOS/UEFI and in the Windows network adapter settings.
 2. Keep one sender online on the same LAN, such as a router, NAS, Raspberry Pi, or another always-on PC.
