@@ -423,7 +423,7 @@ a {
 
 .commandDashboard {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .statusStrip {
@@ -437,12 +437,12 @@ a {
 }
 
 .statusStrip div {
-  min-height: 72px;
+  min-height: 56px;
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
   gap: 2px 9px;
   align-content: center;
-  padding: 12px;
+  padding: 9px 12px;
   background: #fff;
 }
 
@@ -493,10 +493,26 @@ a {
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
 }
 
+.compactWelcome {
+  min-height: 74px;
+  padding: 14px 18px;
+}
+
+.compactWelcome h1 {
+  margin-top: 4px;
+  font-size: 22px;
+}
+
+.compactWelcome span {
+  margin-top: 5px;
+}
+
 .attentionPanel {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   border: 1px solid #dbe7f4;
   border-radius: 8px;
   background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
@@ -505,7 +521,7 @@ a {
 
 .attentionList {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 10px;
 }
 
@@ -513,7 +529,7 @@ a {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px 10px;
-  min-height: 78px;
+  min-height: 62px;
   align-content: center;
   padding: 12px;
   border: 1px solid var(--line-soft);
@@ -589,7 +605,7 @@ a {
 }
 
 .dashboardMainPanel {
-  min-height: 438px;
+  min-height: 0;
 }
 
 .dashboardSidePanel {
@@ -713,6 +729,80 @@ a {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.sourceOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sourceOverviewCard {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 170px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.sourceOverviewCard:hover {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: #fbfdff;
+}
+
+.sourceOverviewTop {
+  display: grid;
+  gap: 4px;
+}
+
+.sourceOverviewCard span,
+.sourceOverviewCard small,
+.sourceOverviewCard p,
+.sourceOverviewCard li {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sourceOverviewCard strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 16px;
+}
+
+.sourceOverviewCard ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 17px;
+}
+
+.sourceOverviewCard p {
+  margin: 0;
+}
+
+.sourceRecentLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.sourceRecentLine span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .systemRows {
@@ -3271,6 +3361,7 @@ body {
 .statusStrip,
 .updateTable,
 .sourceStatusTable,
+.sourceOverviewGrid,
 .systemRows {
   border-color: rgba(125, 166, 217, 0.22);
   background: rgba(125, 166, 217, 0.18);
@@ -3286,6 +3377,7 @@ body {
 .updateRow,
 .systemRows div,
 .sourceStatusTable button,
+.sourceOverviewCard,
 .sourceDigestCard,
 .erpMetricGrid div,
 .erpRows div {
@@ -3299,6 +3391,7 @@ body {
 .updateRow strong,
 .systemRows strong,
 .sourceStatusTable strong,
+.sourceOverviewCard strong,
 .sourceDigestCard strong,
 .erpMetricGrid strong,
 .erpRows strong,
@@ -3316,6 +3409,10 @@ body {
 .systemRows small,
 .sourceStatusTable span,
 .sourceStatusTable small,
+.sourceOverviewCard span,
+.sourceOverviewCard small,
+.sourceOverviewCard p,
+.sourceOverviewCard li,
 .sourceDigestCard span,
 .sourceDigestCard small,
 .sourceDigestCard p,
@@ -3339,6 +3436,7 @@ body {
 .updateRow:hover,
 .attentionItem:hover,
 .sourceStatusTable button:hover,
+.sourceOverviewCard:hover,
 .sourceDigestCard:hover,
 .quickPowerGrid button:hover {
   border-color: rgba(125, 211, 252, 0.42);
@@ -3346,6 +3444,7 @@ body {
 }
 
 .sourceTag,
+.sourceRecentLine span,
 .sourceStatusTable em {
   background: rgba(56, 189, 248, 0.12);
   color: #7dd3fc;
@@ -3414,6 +3513,7 @@ body {
 
   .settingsTabsWide,
   .settingsInfoGrid,
+  .sourceOverviewGrid,
   .sourceDigestGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3510,6 +3610,7 @@ body {
   }
 
   .statusStrip,
+  .attentionPanel,
   .attentionList,
   .erpMetricGrid,
   .erpRows,
@@ -3598,6 +3699,7 @@ body {
   .settingsTabs,
   .settingsLayerGrid,
   .settingsInfoGrid,
+  .sourceOverviewGrid,
   .sourceDigestGrid,
   .knowledgeOverview,
   .sourceManager,

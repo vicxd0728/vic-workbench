@@ -570,17 +570,6 @@ function ActiveView(props) {
   return (
     <section className="contentGrid dashboardPage commandPage">
       <div className="primaryColumn">
-        <section className="welcomeBand compactWelcome">
-          <div>
-            <p>{todayLabel}</p>
-            <h1>今天只看重點</h1>
-            <span>首頁保留重要資訊、待辦、Notion 摘要與新聞快訊；需要細節再進分頁。</span>
-          </div>
-          <div className="dailyScore">
-            <strong>{stats.progress}%</strong>
-            <span>完成度</span>
-          </div>
-        </section>
         <DashboardOverview
           stats={stats}
           tasks={tasks}
@@ -665,7 +654,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const importantTasks = tasks.filter((task) => !task.done).slice(0, 3);
   const queueCount = notes.filter((note) => !note.synced).length;
   const newestSource = [...(notionData.sourceBriefs || [])].sort((a, b) => new Date(b.latest?.lastEditedTime || 0) - new Date(a.latest?.lastEditedTime || 0))[0];
-  const topBullets = notionData.overviewBullets.slice(0, 6);
+  const topBullets = notionData.overviewBullets.slice(0, 8);
   const [deviceStatus, setDeviceStatus] = useState({ status: 'loading', data: null });
   const deviceState = deviceStatus.data?.state;
   const temperature = deviceState?.telemetry?.temperature;
@@ -690,12 +679,16 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const sourceDigestCards = notionData.sourceBriefs.map((source) => {
     const latest = source.latest;
     const highlights = latest?.highlights?.length ? latest.highlights : splitSummaryHighlights(latest?.summary || '');
+    const recentItems = [...source.items]
+      .sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))
+      .slice(0, 3);
     return {
       id: source.id,
       label: source.label,
       type: source.sourceType === 'folder' ? '父頁資料夾' : 'Database',
       count: source.items.length,
       latest,
+      recentItems,
       status: source.status,
       message: source.message,
       highlights: highlights.slice(0, 3)
@@ -716,6 +709,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     { id: 'device', label: '裝置' }
   ];
   const showNotion = focusTab === 'overview' || focusTab === 'notion';
+  const showNotionDetail = focusTab === 'notion';
   const showDevice = focusTab === 'device';
   const showErp = focusTab === 'overview' || focusTab === 'erp';
 
@@ -778,18 +772,28 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       <div className={`dashboardLayout focus-${focusTab}`}>
         {showNotion && <section className="dashboardMainPanel">
           <div className="dashboardPanelHeader">
-            <div><h2>今日總覽</h2><span>{newestSource?.latest ? `最新來源：${newestSource.label}` : '等待 Notion 更新'}</span></div>
+            <div><h2>各來源重點</h2><span>每個資料庫或父頁只佔一格，避免單一來源洗版</span></div>
             <button onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新整理</button>
           </div>
-          <div className="updateTable">
-            <div className="updateTableHead"><span>來源</span><span>標題</span><span>更新</span><span>重點摘要</span></div>
-            {topBullets.length > 0 ? topBullets.map((item) => (
-              <a className="updateRow" href={item.url} target="_blank" rel="noreferrer" key={item.id}>
-                <span className="sourceTag">{item.sourceLabel}</span>
-                <strong>{item.title}</strong>
-                <time>{formatKnowledgeTime(item.time)}</time>
-                <p>{item.text}</p>
-              </a>
+          <div className="sourceOverviewGrid">
+            {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (
+              <button className="sourceOverviewCard" key={source.id} onClick={() => setActiveView('knowledge')}>
+                <div className="sourceOverviewTop">
+                  <span>{source.type} · {source.count} 頁</span>
+                  <strong>{source.label}</strong>
+                  <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.message}</small>
+                </div>
+                {source.highlights.length > 0 ? (
+                  <ul>{source.highlights.map((text) => <li key={text}>{text}</li>)}</ul>
+                ) : (
+                  <p>{source.status === 'loading' ? '正在讀取最新資料...' : '尚未產生重點摘要。'}</p>
+                )}
+                {source.recentItems.length > 1 && (
+                  <div className="sourceRecentLine">
+                    {source.recentItems.slice(1).map((item) => <span key={item.id}>{item.title}</span>)}
+                  </div>
+                )}
+              </button>
             )) : (
               <div className="dashboardEmpty"><BookOpen size={18} />正在讀取 Notion；若一直沒有資料，請確認來源頁面已分享給 integration。</div>
             )}
@@ -813,25 +817,20 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           </div>
         </aside>}
 
-        {showNotion && <section className="dashboardSubPanel">
+        {showNotionDetail && <section className="dashboardSubPanel">
           <div className="dashboardPanelHeader">
-            <div><h2>Notion 來源最新資訊</h2><span>每個資料庫或父頁只顯示最新頁面與重點</span></div>
+            <div><h2>Notion 最新明細</h2><span>跨來源依更新時間排序，適合追細節</span></div>
             <button onClick={() => setActiveView('knowledge')}>管理來源 <ChevronRight size={15} /></button>
           </div>
-          <div className="sourceDigestGrid">
-            {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (
-              <button className="sourceDigestCard" key={source.id} onClick={() => setActiveView('knowledge')}>
-                <div>
-                  <span>{source.type} · {source.count} 頁</span>
-                  <strong>{source.label}</strong>
-                  <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.message}</small>
-                </div>
-                {source.highlights.length > 0 ? (
-                  <ul>{source.highlights.map((text) => <li key={text}>{text}</li>)}</ul>
-                ) : (
-                  <p>{source.status === 'loading' ? '正在讀取最新資料...' : '尚未產生重點摘要。'}</p>
-                )}
-              </button>
+          <div className="updateTable">
+            <div className="updateTableHead"><span>來源</span><span>標題</span><span>更新</span><span>重點摘要</span></div>
+            {topBullets.length > 0 ? topBullets.map((item) => (
+              <a className="updateRow" href={item.url} target="_blank" rel="noreferrer" key={item.id}>
+                <span className="sourceTag">{item.sourceLabel}</span>
+                <strong>{item.title}</strong>
+                <time>{formatKnowledgeTime(item.time)}</time>
+                <p>{item.text}</p>
+              </a>
             )) : <div className="dashboardEmpty">尚未設定 Notion 資料來源。</div>}
           </div>
         </section>}
