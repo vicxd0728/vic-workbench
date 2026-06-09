@@ -672,7 +672,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const tempValue = temperature?.available ? `${temperature.celsius}°C` : '未回報';
   const tempLevel = temperature?.available && temperature.celsius >= 90 ? '危險' : temperature?.available && temperature.celsius >= 80 ? '偏高' : '正常';
   const erpData = erpBoard.data;
-  const erpStatusLabel = erpBoard.status === 'ready' ? '已同步' : erpBoard.status === 'loading' ? '讀取中' : '需設定';
+  const erpStatusLabel = erpBoard.status === 'loading' && !erpData ? '讀取中' : '重新整理';
   const erpMetrics = [
     ['總待處理', erpData?.totalPending ?? '--', '跨部門'],
     ['今日出貨', erpData?.todayShip ?? '--', '出貨'],
