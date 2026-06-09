@@ -468,11 +468,111 @@ a {
   font-size: 14px;
 }
 
+.dashboardFocusTabs {
+  display: inline-grid;
+  grid-template-columns: repeat(4, minmax(84px, 1fr));
+  width: min(100%, 520px);
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.dashboardFocusTabs button {
+  min-height: 34px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.dashboardFocusTabs button:hover,
+.dashboardFocusTabs .activeFocusTab {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+}
+
+.attentionPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe7f4;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  box-shadow: var(--shadow-soft);
+}
+
+.attentionList {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.attentionItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  min-height: 78px;
+  align-content: center;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.attentionItem span,
+.attentionItem small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.attentionItem strong {
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 22px;
+  white-space: nowrap;
+}
+
+.attentionItem small {
+  grid-column: 1 / -1;
+}
+
+.attentionItem.danger {
+  border-color: rgba(239, 68, 68, 0.28);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.attentionItem.danger strong {
+  color: var(--red);
+}
+
+.attentionItem.warning {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.attentionItem.warning strong {
+  color: var(--amber);
+}
+
+.attentionItem.ok strong {
+  color: var(--green);
+}
+
 .dashboardLayout {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) 330px;
   gap: 14px;
   align-items: start;
+}
+
+.dashboardLayout.focus-erp,
+.dashboardLayout.focus-notion,
+.dashboardLayout.focus-device {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .dashboardMainPanel,
@@ -3120,6 +3220,10 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .attentionList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .brand {
     grid-template-columns: 42px;
     justify-content: center;
@@ -3245,6 +3349,7 @@ body {
   }
 
   .statusStrip,
+  .attentionList,
   .erpMetricGrid,
   .erpRows,
   .quickPowerGrid {

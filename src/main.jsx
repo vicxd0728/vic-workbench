@@ -661,6 +661,7 @@ function PageHeader({ title, subtitle }) {
 }
 
 function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData, erpBoard }) {
+  const [focusTab, setFocusTab] = useState('overview');
   const importantTasks = tasks.filter((task) => !task.done).slice(0, 3);
   const queueCount = notes.filter((note) => !note.synced).length;
   const newestSource = [...(notionData.sourceBriefs || [])].sort((a, b) => new Date(b.latest?.lastEditedTime || 0) - new Date(a.latest?.lastEditedTime || 0))[0];
@@ -686,6 +687,29 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     ['C端出貨中', erpData?.corderShipping ?? '--', 'C端尚未完成'],
     ['請假待審', erpData?.leavePending ?? '--', '人員審核']
   ];
+  const attentionItems = [
+    temperature?.available && temperature.celsius >= 90
+      ? { level: 'danger', label: '電腦溫度過高', value: `${temperature.celsius}°C`, detail: '建議先保存工作並睡眠或關機散熱。' }
+      : null,
+    erpData?.totalPending > 0
+      ? { level: erpData.totalPending >= 80 ? 'danger' : 'warning', label: 'ERP 待處理', value: `${erpData.totalPending} 件`, detail: `逾期 ${erpData.overdue || 0}、庫存警示 ${erpData.stockWarning || 0}。` }
+      : null,
+    notionData.sourceBriefs.some((source) => source.status === 'error')
+      ? { level: 'warning', label: 'Notion 來源異常', value: `${notionData.sourceBriefs.filter((source) => source.status === 'error').length} 個`, detail: '到知識庫分頁檢查來源連結或權限。' }
+      : null,
+    !deviceStatus.data?.online
+      ? { level: 'muted', label: '電腦代理離線', value: '未連線', detail: '遠端控制需本機代理程式持續執行。' }
+      : null
+  ].filter(Boolean);
+  const focusTabs = [
+    { id: 'overview', label: '重點' },
+    { id: 'erp', label: 'ERP' },
+    { id: 'notion', label: 'Notion' },
+    { id: 'device', label: '裝置' }
+  ];
+  const showNotion = focusTab === 'overview' || focusTab === 'notion';
+  const showDevice = focusTab === 'overview' || focusTab === 'device';
+  const showErp = focusTab === 'overview' || focusTab === 'erp';
 
   useEffect(() => {
     let isMounted = true;
@@ -718,8 +742,33 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
         <div><Inbox size={18} /><span>待整理</span><strong>{queueCount} 筆</strong></div>
       </div>
 
-      <div className="dashboardLayout">
-        <section className="dashboardMainPanel">
+      <div className="dashboardFocusTabs" role="tablist" aria-label="總攬焦點">
+        {focusTabs.map((tab) => (
+          <button type="button" className={focusTab === tab.id ? 'activeFocusTab' : ''} key={tab.id} onClick={() => setFocusTab(tab.id)}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <section className="attentionPanel">
+        <div className="dashboardPanelHeader compact">
+          <div><h2>需要先看的事</h2><span>{attentionItems.length ? '依風險與待處理量排序' : '目前沒有需要立即處理的警示'}</span></div>
+        </div>
+        <div className="attentionList">
+          {attentionItems.length ? attentionItems.map((item) => (
+            <div className={`attentionItem ${item.level}`} key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </div>
+          )) : (
+            <div className="attentionItem ok"><span>狀態穩定</span><strong>OK</strong><small>ERP、Notion 與裝置沒有立即警示。</small></div>
+          )}
+        </div>
+      </section>
+
+      <div className={`dashboardLayout focus-${focusTab}`}>
+        {showNotion && <section className="dashboardMainPanel">
           <div className="dashboardPanelHeader">
             <div><h2>今日總覽</h2><span>{newestSource?.latest ? `最新來源：${newestSource.label}` : '等待 Notion 更新'}</span></div>
             <button onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新整理</button>
@@ -737,9 +786,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
               <div className="dashboardEmpty"><BookOpen size={18} />正在讀取 Notion；若一直沒有資料，請確認來源頁面已分享給 integration。</div>
             )}
           </div>
-        </section>
+        </section>}
 
-        <aside className="dashboardSidePanel">
+        {showDevice && <aside className="dashboardSidePanel">
           <div className="dashboardPanelHeader compact">
             <div><h2>系統狀態</h2><span>{deviceStatus.data?.online ? '代理在線' : '等待代理回報'}</span></div>
           </div>
@@ -754,9 +803,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
             <button onClick={() => setActiveView('automation')}><Power size={17} /><span>關機</span></button>
             <button onClick={() => setActiveView('automation')}><RotateCcw size={17} /><span>重開機</span></button>
           </div>
-        </aside>
+        </aside>}
 
-        <section className="dashboardSubPanel">
+        {showNotion && <section className="dashboardSubPanel">
           <div className="dashboardPanelHeader">
             <div><h2>資料來源狀態</h2><span>Notion database / 父頁更新概況</span></div>
             <button onClick={() => setActiveView('knowledge')}>管理來源 <ChevronRight size={15} /></button>
@@ -772,9 +821,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
               </button>
             )) : <div className="dashboardEmpty">尚未設定 Notion 資料來源。</div>}
           </div>
-        </section>
+        </section>}
 
-        <section className="dashboardSubPanel erpPreview">
+        {showErp && <section className="dashboardSubPanel erpPreview">
           <div className="dashboardPanelHeader">
             <div><h2>LEMATEC ERP 看板</h2><span>{erpData?.updatedAt ? `最後更新：${formatKnowledgeTime(erpData.updatedAt)}` : erpBoard.error || '等待 ERP JSON API'}</span></div>
             <button onClick={() => erpBoard.refresh()}><RotateCcw size={15} />{erpStatusLabel}</button>
@@ -785,7 +834,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           <div className="erpRows">
             {erpRows.map(([label, value, area]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{area}</small></div>)}
           </div>
-        </section>
+        </section>}
       </div>
     </section>
   );
