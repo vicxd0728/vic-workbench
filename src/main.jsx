@@ -555,7 +555,7 @@ function ActiveView(props) {
     return (
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
-          <PageHeader title="設定與自動化" subtitle="所有 Token、Notion、新聞來源與未來 API 設定集中在同一頁。" />
+          <PageHeader title="系統設定" subtitle="資料來源、AI 彙整、遠端電腦、安全性與部署狀態分層管理。" />
           <RemotePowerPanel />
           <SettingsWorkspace notionConfig={notionConfig} setNotionConfig={setNotionConfig} resetDemoData={resetDemoData} />
         </div>
@@ -1465,8 +1465,8 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
     <section className="panel notionWorkspace settingsHub">
       <div className="settingsHero">
         <div>
-          <h2>Notion 設定</h2>
-          <p>貼上 Database 或父頁連結就好，系統會自動解析 ID。新增來源、連線、讀取結果分開管理。</p>
+          <h2>系統設定</h2>
+          <p>把來源、AI、遠端電腦、密鑰與部署分開管理。日常只看狀態，需要調整時再進入對應層級。</p>
         </div>
         <div className="settingsHeroStats">
           <span>{tokenStatusLabel}</span>
@@ -1475,11 +1475,13 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
         </div>
       </div>
 
-      <div className="settingsTabs" role="tablist" aria-label="Notion settings">
+      <div className="settingsTabs settingsTabsWide" role="tablist" aria-label="系統設定">
         {[
-          ['sources', '資料來源', `${configuredDatabases.length} 個`],
-          ['connection', '連線', tokenStatusLabel],
-          ['results', '讀取結果', `${successfulRuns} 筆成功`]
+          ['sources', '資料來源', `${connectedSources}/${configuredDatabases.length} 已設定`],
+          ['ai', 'AI 彙整', '規則摘要 / 待接模型'],
+          ['device', '遠端電腦', '狀態與電源'],
+          ['security', '安全性', tokenStatusLabel],
+          ['deploy', '部署', 'GitHub / Cloudflare']
         ].map(([id, label, meta]) => (
           <button type="button" className={activeSettingsTab === id ? 'activeSettingsTab' : ''} key={id} onClick={() => setActiveSettingsTab(id)}>
             <strong>{label}</strong>
@@ -1488,81 +1490,81 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
         ))}
       </div>
 
-      {activeSettingsTab === 'connection' && (
-        <div className="settingsPanel">
-          <PwaInstallCard pwaInstall={pwaInstall} />
-          <div className="connectionGuide compact">
-            <div><span>1</span><strong>貼 Token</strong><p>本機測試可先填 Token；正式部署建議放到 Cloudflare 環境變數。</p></div>
-            <div><span>2</span><strong>新增來源</strong><p>Database 貼 database 連結；父頁資料夾貼父頁連結。</p></div>
-            <div><span>3</span><strong>讀取資料</strong><p>每個來源可獨立測試，確認能抓到最新子頁或資料庫頁面。</p></div>
-          </div>
-          <div className="notionSetup focused">
-            <label><span>Notion 工作區連結</span><input value={notionConfig.workspaceUrl} onChange={(event) => updateConfig('workspaceUrl', event.target.value)} placeholder="https://www.notion.so/..." /></label>
-            <label><span>Notion API Token</span><input value={notionConfig.token} onChange={(event) => updateConfig('token', event.target.value)} placeholder="secret_..." type="password" /></label>
-            <label><span>新聞關鍵字</span><input value={notionConfig.newsKeywords} onChange={(event) => updateConfig('newsKeywords', event.target.value)} placeholder="AI, 工具, 市場趨勢" /></label>
-          </div>
-          <div className="securityNote">正式上線時，建議把 Token 設在 Cloudflare Pages 的 NOTION_TOKEN，前端只保留來源連結。</div>
-        </div>
-      )}
-
       {activeSettingsTab === 'sources' && (
-        <div className="sourceManager">
-          <aside className="sourceList">
-            <div className="databaseHeaderActions">
-              <button className="secondaryAction" onClick={() => addCustomDatabase('database')}><Plus size={17} /><span>新增 Database</span></button>
-              <button className="secondaryAction" onClick={() => addCustomDatabase('folder')}><Plus size={17} /><span>新增父頁</span></button>
-            </div>
-            {configuredDatabases.map((config) => {
-              const preset = notionDatabases.find((item) => item.id === config.id);
-              const Icon = preset?.icon || BriefcaseBusiness;
-              const isConnected = Boolean(config.databaseId || config.pageUrl);
-              return (
-                <button type="button" className={`sourceListItem ${activeSource.id === config.id ? 'activeSource' : ''}`} key={config.id} onClick={() => setActiveSourceId(config.id)}>
-                  <Icon size={17} />
-                  <span><strong>{config.label}</strong><small>{config.sourceType === 'folder' ? '父頁資料夾' : 'Database'} · {isConnected ? '已貼連結' : '待設定'}</small></span>
-                </button>
-              );
-            })}
+        <div className="settingsLayerGrid">
+          <aside className="settingsLayerAside">
+            <strong>來源總表</strong>
+            <span>Notion 來源是知識摘要的輸入；ERP 看板由 Worker JSON API 讀取。</span>
+            <div className="layerMetric"><b>{connectedSources}</b><small>已設定 Notion 來源</small></div>
+            <div className="layerMetric"><b>1</b><small>ERP JSON endpoint</small></div>
           </aside>
-
-          <article className="sourceEditor">
-            <div className="sourceEditorHeader">
-              <div><strong>{activeSource.label}</strong><span>{activeSource.sourceType === 'folder' ? '讀取父頁底下的子頁' : '讀取 Notion database 裡的頁面'}</span></div>
-              <button className="primaryAction" onClick={() => readNotionSource(activeSource)} disabled={!hasToken || !activeHasSource || activeRun?.status === 'loading'}>
-                <RotateCcw size={16} />{activeRun?.status === 'loading' ? '讀取中' : '讀取資料'}
-              </button>
-            </div>
-            <div className="databaseSettings singleSource">
-              <label><span>來源名稱</span><input value={activeSource.label} onChange={(event) => updateDatabaseConfig(activeSource.id, 'label', event.target.value)} placeholder="例如：客戶分析週報" /></label>
-              <label><span>用途備註</span><input value={activeSource.purpose} onChange={(event) => updateDatabaseConfig(activeSource.id, 'purpose', event.target.value)} placeholder="例如：分析每週客戶互動與下一步" /></label>
-              <label><span>來源類型</span><select value={activeSource.sourceType || 'database'} onChange={(event) => updateDatabaseConfig(activeSource.id, 'sourceType', event.target.value)}><option value="database">Notion Database</option><option value="folder">父頁資料夾</option></select></label>
-              {(activeSource.sourceType || 'database') === 'database' ? (
-                <label><span>Database 連結</span><input value={activeSource.databaseId} onChange={(event) => updateDatabaseConfig(activeSource.id, 'databaseId', event.target.value)} placeholder="貼上 Notion database 連結" /></label>
-              ) : (
-                <label><span>父頁連結</span><input value={activeSource.pageUrl} onChange={(event) => updateDatabaseConfig(activeSource.id, 'pageUrl', event.target.value)} placeholder="https://app.notion.com/p/356ff6f424bb81d4a9a8c4a997fcffc6" /></label>
-              )}
-              <div className="settingPair">
-                <label><span>排序方式</span><select value={activeSource.sortMode || 'updated'} onChange={(event) => updateDatabaseConfig(activeSource.id, 'sortMode', event.target.value)}>{notionSortOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
-                <label><span>分析上限</span><select value={String(activeSource.analysisLimit || 3)} onChange={(event) => updateDatabaseConfig(activeSource.id, 'analysisLimit', Number(event.target.value))}><option value="1">1 個頁面</option><option value="2">2 個頁面</option><option value="3">3 個頁面</option></select></label>
+          <div className="sourceManager">
+            <aside className="sourceList">
+              <div className="databaseHeaderActions">
+                <button className="secondaryAction" onClick={() => addCustomDatabase('database')}><Plus size={17} /><span>新增 Database</span></button>
+                <button className="secondaryAction" onClick={() => addCustomDatabase('folder')}><Plus size={17} /><span>新增父頁</span></button>
               </div>
-            </div>
-            <div className={`sourceRunState ${activeRun?.status || ''}`}>
-              <div><span>{activeRun?.status === 'ready' ? '讀取成功' : activeRun?.status === 'error' ? '讀取失敗' : '尚未讀取'}</span><p>{activeRun?.message || (activeHasSource ? '設定完成後按「讀取資料」確認 Notion 內容。' : '請先貼上 Notion 來源連結。')}</p></div>
-            </div>
-            {!activeSource.locked && <button className="dangerButton" onClick={() => deleteCustomDatabase(activeSource.id)}><Trash2 size={15} />刪除這個來源</button>}
-          </article>
+              <button type="button" className="sourceListItem erpSourceItem">
+                <BarChart3 size={17} />
+                <span><strong>LEMATEC ERP 看板</strong><small>Worker JSON · 已連接</small></span>
+              </button>
+              {configuredDatabases.map((config) => {
+                const preset = notionDatabases.find((item) => item.id === config.id);
+                const Icon = preset?.icon || BriefcaseBusiness;
+                const isConnected = Boolean(config.databaseId || config.pageUrl);
+                return (
+                  <button type="button" className={`sourceListItem ${activeSource.id === config.id ? 'activeSource' : ''}`} key={config.id} onClick={() => setActiveSourceId(config.id)}>
+                    <Icon size={17} />
+                    <span><strong>{config.label}</strong><small>{config.sourceType === 'folder' ? '父頁資料夾' : 'Database'} · {isConnected ? '已貼連結' : '待設定'}</small></span>
+                  </button>
+                );
+              })}
+            </aside>
+
+            <article className="sourceEditor">
+              <div className="sourceEditorHeader">
+                <div><strong>{activeSource.label}</strong><span>{activeSource.sourceType === 'folder' ? '讀取父頁底下的子頁' : '讀取 Notion database 裡的頁面'}</span></div>
+                <button className="primaryAction" onClick={() => readNotionSource(activeSource)} disabled={!hasToken || !activeHasSource || activeRun?.status === 'loading'}>
+                  <RotateCcw size={16} />{activeRun?.status === 'loading' ? '讀取中' : '讀取資料'}
+                </button>
+              </div>
+              <div className="databaseSettings singleSource">
+                <label><span>來源名稱</span><input value={activeSource.label} onChange={(event) => updateDatabaseConfig(activeSource.id, 'label', event.target.value)} placeholder="例如：客戶分析週報" /></label>
+                <label><span>用途備註</span><input value={activeSource.purpose} onChange={(event) => updateDatabaseConfig(activeSource.id, 'purpose', event.target.value)} placeholder="例如：分析每週客戶互動與下一步" /></label>
+                <label><span>來源類型</span><select value={activeSource.sourceType || 'database'} onChange={(event) => updateDatabaseConfig(activeSource.id, 'sourceType', event.target.value)}><option value="database">Notion Database</option><option value="folder">父頁資料夾</option></select></label>
+                {(activeSource.sourceType || 'database') === 'database' ? (
+                  <label><span>Database 連結</span><input value={activeSource.databaseId} onChange={(event) => updateDatabaseConfig(activeSource.id, 'databaseId', event.target.value)} placeholder="貼上 Notion database 連結" /></label>
+                ) : (
+                  <label><span>父頁連結</span><input value={activeSource.pageUrl} onChange={(event) => updateDatabaseConfig(activeSource.id, 'pageUrl', event.target.value)} placeholder="https://app.notion.com/p/356ff6f424bb81d4a9a8c4a997fcffc6" /></label>
+                )}
+                <div className="settingPair">
+                  <label><span>排序方式</span><select value={activeSource.sortMode || 'updated'} onChange={(event) => updateDatabaseConfig(activeSource.id, 'sortMode', event.target.value)}>{notionSortOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
+                  <label><span>分析上限</span><select value={String(activeSource.analysisLimit || 3)} onChange={(event) => updateDatabaseConfig(activeSource.id, 'analysisLimit', Number(event.target.value))}><option value="1">1 個頁面</option><option value="2">2 個頁面</option><option value="3">3 個頁面</option></select></label>
+                </div>
+              </div>
+              <div className={`sourceRunState ${activeRun?.status || ''}`}>
+                <div><span>{activeRun?.status === 'ready' ? '讀取成功' : activeRun?.status === 'error' ? '讀取失敗' : '尚未讀取'}</span><p>{activeRun?.message || (activeHasSource ? '設定完成後按「讀取資料」確認 Notion 內容。' : '請先貼上 Notion 來源連結。')}</p></div>
+              </div>
+              {!activeSource.locked && <button className="dangerButton" onClick={() => deleteCustomDatabase(activeSource.id)}><Trash2 size={15} />刪除這個來源</button>}
+            </article>
+          </div>
         </div>
       )}
 
-      {activeSettingsTab === 'results' && (
+      {activeSettingsTab === 'ai' && (
         <div className="settingsPanel">
+          <div className="settingsInfoGrid">
+            <article><Wand2 size={18} /><strong>目前模式</strong><p>Notion 頁面會先由程式抽取摘要與 highlights，首頁依來源與更新時間呈現。</p></article>
+            <article><Sparkles size={18} /><strong>下一階段</strong><p>新增 AI 彙整 API，把多個來源整理成「總結、風險、下一步、待確認」。</p></article>
+            <article><ShieldAlert size={18} /><strong>建議做法</strong><p>模型金鑰放 Cloudflare，不放前端；摘要結果快取，避免每次開頁都重算。</p></article>
+          </div>
           <div className="resultGrid">
             {configuredDatabases.map((config) => {
               const runState = sourceRuns[config.id];
               return (
                 <article className={`resultCard ${runState?.status || ''}`} key={config.id}>
-                  <div className="resultCardTitle"><strong>{config.label}</strong><span>{runState?.status === 'ready' ? '成功' : runState?.status === 'error' ? '失敗' : '未測試'}</span></div>
-                  <p>{runState?.message || '這個來源還沒有讀取紀錄。'}</p>
+                  <div className="resultCardTitle"><strong>{config.label}</strong><span>{runState?.status === 'ready' ? '可彙整' : runState?.status === 'error' ? '需修正' : '未測試'}</span></div>
+                  <p>{runState?.message || '先在資料來源讀取成功後，AI 彙整會使用這個來源。'}</p>
                   {runState?.summaries?.length > 0 && (
                     <div className="sourcePreviewList">
                       {runState.summaries.map((item) => <a href={item.url} target="_blank" rel="noreferrer" key={item.id || item.title}><strong>{item.title}</strong><span>{item.summary}</span></a>)}
@@ -1571,6 +1573,43 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
                 </article>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {activeSettingsTab === 'device' && (
+        <div className="settingsPanel">
+          <div className="settingsInfoGrid">
+            <article><Wifi size={18} /><strong>代理程式</strong><p>本機 `remote-shutdown-agent.js` 會每 10 秒回報電腦狀態，並接收睡眠、關機、重開機指令。</p></article>
+            <article><Thermometer size={18} /><strong>溫度提醒</strong><p>80°C 以上顯示偏高，90°C 以上會進入「需要先看」警示。</p></article>
+            <article><Moon size={18} /><strong>睡眠喚醒</strong><p>睡眠可設定定時喚醒；關機後無法由同一台電腦自我喚醒。</p></article>
+          </div>
+          <div className="securityNote">目前已建立登入自動啟動腳本，讓代理程式在 Windows 登入後自動啟動。</div>
+        </div>
+      )}
+
+      {activeSettingsTab === 'security' && (
+        <div className="settingsPanel">
+          <div className="notionSetup focused">
+            <label><span>Notion 工作區連結</span><input value={notionConfig.workspaceUrl} onChange={(event) => updateConfig('workspaceUrl', event.target.value)} placeholder="https://www.notion.so/..." /></label>
+            <label><span>Notion API Token</span><input value={notionConfig.token} onChange={(event) => updateConfig('token', event.target.value)} placeholder="只供本機測試，正式用 Cloudflare Secret" type="password" /></label>
+            <label><span>新聞關鍵字</span><input value={notionConfig.newsKeywords} onChange={(event) => updateConfig('newsKeywords', event.target.value)} placeholder="AI, 工具, 市場趨勢" /></label>
+          </div>
+          <div className="settingsInfoGrid">
+            <article><ShieldAlert size={18} /><strong>正式密鑰</strong><p>Notion、遠端控制與代理 token 都應放在 Cloudflare Secrets 或本機 `.env`，不放到 GitHub。</p></article>
+            <article><Command size={18} /><strong>遠端控制確認</strong><p>關機、重開機、睡眠都需要控制密鑰與繁中確認字，避免誤觸。</p></article>
+            <article><CheckCircle2 size={18} /><strong>目前狀態</strong><p>{tokenStatusLabel}。ERP Worker 已使用 Worker Secret 讀取 Notion。</p></article>
+          </div>
+        </div>
+      )}
+
+      {activeSettingsTab === 'deploy' && (
+        <div className="settingsPanel">
+          <PwaInstallCard pwaInstall={pwaInstall} />
+          <div className="connectionGuide compact">
+            <div><span>1</span><strong>GitHub</strong><p>介面修改推到 `vic-workbench` main 後，自動觸發 Cloudflare Pages。</p></div>
+            <div><span>2</span><strong>Cloudflare Pages</strong><p>正式站使用 `vic-workbench.pages.dev`，Pages Functions 處理 Notion 與遠端電腦 API。</p></div>
+            <div><span>3</span><strong>Worker</strong><p>ERP 看板 JSON 由 `green-wave-c22f` Worker 提供，供個人看板讀取。</p></div>
           </div>
           <div className="settingsActions"><button className="secondaryAction" onClick={resetDemoData}><RotateCcw size={17} /><span>重置本機資料</span></button></div>
         </div>
