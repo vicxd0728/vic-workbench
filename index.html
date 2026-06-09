@@ -20,7 +20,40 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+          navigator.serviceWorker.register('/sw.js').then((registration) => {
+            const reloadForUpdate = () => {
+              if (sessionStorage.getItem('sw-reloaded-for-update') === '1') return;
+              sessionStorage.setItem('sw-reloaded-for-update', '1');
+              window.location.reload();
+            };
+
+            const activateWaitingWorker = () => {
+              if (registration.waiting) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+            };
+
+            registration.update().then(activateWaitingWorker).catch(() => {});
+
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+              });
+            });
+
+            navigator.serviceWorker.addEventListener('controllerchange', reloadForUpdate);
+
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') {
+                sessionStorage.removeItem('sw-reloaded-for-update');
+                registration.update().then(activateWaitingWorker).catch(() => {});
+              }
+            });
+          }).catch(() => {});
         });
       }
     </script>
