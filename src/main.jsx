@@ -687,18 +687,26 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     ['C端出貨中', erpData?.corderShipping ?? '--', 'C端尚未完成'],
     ['請假待審', erpData?.leavePending ?? '--', '人員審核']
   ];
+  const sourceDigestCards = notionData.sourceBriefs.map((source) => {
+    const latest = source.latest;
+    const highlights = latest?.highlights?.length ? latest.highlights : splitSummaryHighlights(latest?.summary || '');
+    return {
+      id: source.id,
+      label: source.label,
+      type: source.sourceType === 'folder' ? '父頁資料夾' : 'Database',
+      count: source.items.length,
+      latest,
+      status: source.status,
+      message: source.message,
+      highlights: highlights.slice(0, 3)
+    };
+  });
   const attentionItems = [
-    temperature?.available && temperature.celsius >= 90
-      ? { level: 'danger', label: '電腦溫度過高', value: `${temperature.celsius}°C`, detail: '建議先保存工作並睡眠或關機散熱。' }
-      : null,
     erpData?.totalPending > 0
       ? { level: erpData.totalPending >= 80 ? 'danger' : 'warning', label: 'ERP 待處理', value: `${erpData.totalPending} 件`, detail: `逾期 ${erpData.overdue || 0}、庫存警示 ${erpData.stockWarning || 0}。` }
       : null,
     notionData.sourceBriefs.some((source) => source.status === 'error')
       ? { level: 'warning', label: 'Notion 來源異常', value: `${notionData.sourceBriefs.filter((source) => source.status === 'error').length} 個`, detail: '到知識庫分頁檢查來源連結或權限。' }
-      : null,
-    !deviceStatus.data?.online
-      ? { level: 'muted', label: '電腦代理離線', value: '未連線', detail: '遠端控制需本機代理程式持續執行。' }
       : null
   ].filter(Boolean);
   const focusTabs = [
@@ -708,7 +716,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     { id: 'device', label: '裝置' }
   ];
   const showNotion = focusTab === 'overview' || focusTab === 'notion';
-  const showDevice = focusTab === 'overview' || focusTab === 'device';
+  const showDevice = focusTab === 'device';
   const showErp = focusTab === 'overview' || focusTab === 'erp';
 
   useEffect(() => {
@@ -737,8 +745,8 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       <div className="statusStrip">
         <div><Clock3 size={18} /><span>今天</span><strong>{todayLabel}</strong></div>
         <div><BookOpen size={18} /><span>Notion</span><strong>{notionData.allLiveItems.length ? '已同步' : '讀取中'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '等待資料'}</small></div>
-        <div><Wifi size={18} /><span>遠端電腦</span><strong>{deviceStatus.data?.online ? '在線' : '離線'}</strong><small>{deviceState?.hostname || 'vic-windows-pc'}</small></div>
-        <div><Thermometer size={18} /><span>溫度</span><strong>{tempValue}</strong><small>{tempLevel}</small></div>
+        <div><BarChart3 size={18} /><span>ERP</span><strong>{erpData ? `${erpData.totalPending} 待處理` : '讀取中'}</strong><small>{erpData ? `逾期 ${erpData.overdue || 0} / 庫存 ${erpData.stockWarning || 0}` : '等待資料'}</small></div>
+        <div><Sparkles size={18} /><span>最新來源</span><strong>{newestSource?.label || '等待資料'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '尚未同步'}</small></div>
         <div><Inbox size={18} /><span>待整理</span><strong>{queueCount} 筆</strong></div>
       </div>
 
@@ -807,17 +815,22 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
 
         {showNotion && <section className="dashboardSubPanel">
           <div className="dashboardPanelHeader">
-            <div><h2>資料來源狀態</h2><span>Notion database / 父頁更新概況</span></div>
+            <div><h2>Notion 來源最新資訊</h2><span>每個資料庫或父頁只顯示最新頁面與重點</span></div>
             <button onClick={() => setActiveView('knowledge')}>管理來源 <ChevronRight size={15} /></button>
           </div>
-          <div className="sourceStatusTable">
-            {notionData.sourceBriefs.length > 0 ? notionData.sourceBriefs.map((source) => (
-              <button key={source.id} onClick={() => setActiveView('knowledge')}>
-                <strong>{source.label}</strong>
-                <span>{source.sourceType === 'folder' ? '父頁資料夾' : 'Database'}</span>
-                <span>{source.items.length} 頁</span>
-                <small>{source.latest ? formatKnowledgeTime(source.latest.lastEditedTime) : source.message}</small>
-                <em>{source.status === 'ready' ? '正常' : source.status === 'loading' ? '讀取中' : '待讀取'}</em>
+          <div className="sourceDigestGrid">
+            {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (
+              <button className="sourceDigestCard" key={source.id} onClick={() => setActiveView('knowledge')}>
+                <div>
+                  <span>{source.type} · {source.count} 頁</span>
+                  <strong>{source.label}</strong>
+                  <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.message}</small>
+                </div>
+                {source.highlights.length > 0 ? (
+                  <ul>{source.highlights.map((text) => <li key={text}>{text}</li>)}</ul>
+                ) : (
+                  <p>{source.status === 'loading' ? '正在讀取最新資料...' : '尚未產生重點摘要。'}</p>
+                )}
               </button>
             )) : <div className="dashboardEmpty">尚未設定 Notion 資料來源。</div>}
           </div>

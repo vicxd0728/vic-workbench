@@ -820,6 +820,63 @@ a {
   font-weight: 850;
 }
 
+.sourceDigestGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sourceDigestCard {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 188px;
+  padding: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.sourceDigestCard:hover {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: #fbfdff;
+}
+
+.sourceDigestCard div {
+  display: grid;
+  gap: 4px;
+}
+
+.sourceDigestCard span,
+.sourceDigestCard small,
+.sourceDigestCard p,
+.sourceDigestCard li {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sourceDigestCard strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.sourceDigestCard ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 17px;
+}
+
+.sourceDigestCard p {
+  margin: 0;
+}
+
 .erpPreview {
   grid-column: 1 / -1;
 }
@@ -3223,10 +3280,13 @@ body {
 .dashboardMainPanel,
 .dashboardSidePanel,
 .dashboardSubPanel,
+.attentionPanel,
+.attentionItem,
 .updateTableHead,
 .updateRow,
 .systemRows div,
 .sourceStatusTable button,
+.sourceDigestCard,
 .erpMetricGrid div,
 .erpRows div {
   background: linear-gradient(180deg, rgba(15, 27, 48, 0.9), rgba(9, 18, 34, 0.84));
@@ -3239,6 +3299,7 @@ body {
 .updateRow strong,
 .systemRows strong,
 .sourceStatusTable strong,
+.sourceDigestCard strong,
 .erpMetricGrid strong,
 .erpRows strong,
 .statusStrip strong {
@@ -3246,6 +3307,8 @@ body {
 }
 
 .dashboardPanelHeader span,
+.attentionItem span,
+.attentionItem small,
 .updateTableHead,
 .updateRow p,
 .updateRow time,
@@ -3253,6 +3316,10 @@ body {
 .systemRows small,
 .sourceStatusTable span,
 .sourceStatusTable small,
+.sourceDigestCard span,
+.sourceDigestCard small,
+.sourceDigestCard p,
+.sourceDigestCard li,
 .erpMetricGrid span,
 .erpMetricGrid small,
 .erpRows span,
@@ -3270,7 +3337,9 @@ body {
 }
 
 .updateRow:hover,
+.attentionItem:hover,
 .sourceStatusTable button:hover,
+.sourceDigestCard:hover,
 .quickPowerGrid button:hover {
   border-color: rgba(125, 211, 252, 0.42);
   background: rgba(56, 189, 248, 0.08);
@@ -3344,7 +3413,8 @@ body {
   }
 
   .settingsTabsWide,
-  .settingsInfoGrid {
+  .settingsInfoGrid,
+  .sourceDigestGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -3528,6 +3598,7 @@ body {
   .settingsTabs,
   .settingsLayerGrid,
   .settingsInfoGrid,
+  .sourceDigestGrid,
   .knowledgeOverview,
   .sourceManager,
   .remotePowerHeader,
