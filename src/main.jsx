@@ -779,6 +779,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   ];
   const newsHighlights = (newsState?.briefs?.length ? newsState.briefs : newsBriefs).slice(0, 4);
   const newsItems = (newsState?.items || []).slice(0, 6);
+  const topNews = newsHighlights[0];
   const sourceDigestCards = notionData.sourceBriefs.map((source) => {
     const latest = source.latest;
     const highlights = latest?.highlights?.length ? latest.highlights : splitSummaryHighlights(latest?.summary || '');
@@ -805,6 +806,34 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       ? { level: 'warning', label: 'Notion 來源異常', value: `${notionData.sourceBriefs.filter((source) => source.status === 'error').length} 個`, detail: '到知識庫分頁檢查來源連結或權限。' }
       : null
   ].filter(Boolean);
+  const readySources = notionData.sourceBriefs.filter((source) => source.status === 'ready' && source.latest);
+  const sourceErrorCount = notionData.sourceBriefs.filter((source) => source.status === 'error').length;
+  const executiveCards = [
+    {
+      tone: erpData?.totalPending >= 80 ? 'danger' : erpData?.totalPending > 0 ? 'warning' : 'ok',
+      label: 'ERP',
+      value: erpData ? `${erpData.totalPending} 待處理` : '讀取中',
+      detail: erpData ? `逾期 ${erpData.overdue || 0} / 庫存警示 ${erpData.stockWarning || 0}` : '等待 ERP 看板資料',
+      action: '查看 ERP',
+      onClick: () => setFocusTab('erp')
+    },
+    {
+      tone: sourceErrorCount ? 'warning' : readySources.length ? 'ok' : 'muted',
+      label: '資料來源',
+      value: readySources.length ? `${readySources.length} 個已同步` : '等待同步',
+      detail: newestSource?.latest ? `${newestSource.label} · ${formatKnowledgeTime(newestSource.latest.lastEditedTime)}` : sourceErrorCount ? `${sourceErrorCount} 個來源需檢查` : '尚未取得最新來源',
+      action: '查看來源',
+      onClick: () => setFocusTab('notion')
+    },
+    {
+      tone: newsState?.status === 'ready' ? 'ok' : 'muted',
+      label: '新聞',
+      value: topNews?.topic || '等待更新',
+      detail: topNews?.title || '新聞來源整理中',
+      action: '查看新聞',
+      onClick: () => setFocusTab('news')
+    }
+  ];
   const focusTabs = [
     { id: 'overview', label: '重點' },
     { id: 'erp', label: 'ERP' },
@@ -857,20 +886,20 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
         ))}
       </div>
 
-      <section className="attentionPanel">
-        <div className="dashboardPanelHeader compact">
-          <div><h2>需要先看的事</h2><span>{attentionItems.length ? '依風險與待處理量排序' : '目前沒有需要立即處理的警示'}</span></div>
+      <section className="priorityBoard">
+        <div className="priorityBoardTitle">
+          <span>今日優先</span>
+          <strong>{attentionItems.length ? `${attentionItems.length} 個訊號需要看` : '目前狀態穩定'}</strong>
         </div>
-        <div className="attentionList">
-          {attentionItems.length ? attentionItems.map((item) => (
-            <div className={`attentionItem ${item.level}`} key={item.label}>
+        <div className="priorityCards">
+          {executiveCards.map((item) => (
+            <button className={`priorityCard ${item.tone}`} key={item.label} onClick={item.onClick}>
               <span>{item.label}</span>
               <strong>{item.value}</strong>
               <small>{item.detail}</small>
-            </div>
-          )) : (
-            <div className="attentionItem ok"><span>狀態穩定</span><strong>OK</strong><small>ERP、Notion 與裝置沒有立即警示。</small></div>
-          )}
+              <em>{item.action}</em>
+            </button>
+          ))}
         </div>
       </section>
 
