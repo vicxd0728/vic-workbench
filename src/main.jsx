@@ -281,6 +281,7 @@ function sanitizeSyncedNotionConfig(config = {}) {
     token: '',
     defaultDatabase: config.defaultDatabase || '',
     aiSummaryPageUrl: config.aiSummaryPageUrl || '',
+    sourceSeenAt: config.sourceSeenAt || {},
     databases: config.databases || defaultNotionDatabaseConfig,
     newsKeywords: config.newsKeywords || '國際, 金融, 匯率, 供應鏈'
   };
@@ -309,6 +310,7 @@ function mergeSyncedNotionConfig(remoteConfig = {}, localConfig = {}) {
     workspaceUrl: local.workspaceUrl || remote.workspaceUrl,
     defaultDatabase: local.defaultDatabase || remote.defaultDatabase,
     aiSummaryPageUrl: local.aiSummaryPageUrl || remote.aiSummaryPageUrl,
+    sourceSeenAt: { ...(remote.sourceSeenAt || {}), ...(local.sourceSeenAt || {}) },
     databases,
     newsKeywords: local.newsKeywords || remote.newsKeywords,
     token: ''
@@ -372,6 +374,7 @@ function App() {
     token: '',
     defaultDatabase: '',
     aiSummaryPageUrl: '',
+    sourceSeenAt: {},
     databases: defaultNotionDatabaseConfig,
     newsKeywords: '國際, 金融, 匯率, 供應鏈'
   });
@@ -381,7 +384,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [lastAction, setLastAction] = useState('準備開始');
   const newsState = useNewsBriefs();
-  const notionData = useNotionSources(notionConfig);
+  const notionData = useNotionSources(notionConfig, setNotionConfig);
   const erpBoard = useErpBoardSummary();
 
   useEffect(() => {
@@ -761,6 +764,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const topBullets = notionData.overviewBullets.slice(0, 8);
   const aiSummaryItem = notionData.aiSummary?.item;
   const aiSummaryHighlights = aiSummaryItem?.highlights?.length ? aiSummaryItem.highlights : splitSummaryHighlights(aiSummaryItem?.summary || '');
+  const updateAlerts = notionData.updateAlerts || [];
   const [deviceStatus, setDeviceStatus] = useState({ status: 'loading', data: null });
   const deviceState = deviceStatus.data?.state;
   const temperature = deviceState?.telemetry?.temperature;
@@ -800,10 +804,14 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       href: latest?.url || source.pageUrl || source.databaseId || '',
       status: source.status,
       message: source.message,
+      hasUpdate: source.hasUpdate,
       highlights: highlights.slice(0, 3)
     };
   });
   const attentionItems = [
+    updateAlerts.length > 0
+      ? { level: 'warning', label: '資料來源有更新', value: `${updateAlerts.length} 個來源`, detail: `${updateAlerts[0].label} · ${formatKnowledgeTime(updateAlerts[0].latest.lastEditedTime)}` }
+      : null,
     erpData?.totalPending > 0
       ? { level: erpData.totalPending >= 80 ? 'danger' : 'warning', label: 'ERP 待處理', value: `${erpData.totalPending} 件`, detail: `逾期 ${erpData.overdue || 0}、庫存警示 ${erpData.stockWarning || 0}。` }
       : null,
@@ -825,8 +833,8 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     {
       tone: sourceErrorCount ? 'warning' : readySources.length ? 'ok' : 'muted',
       label: '資料來源',
-      value: readySources.length ? `${readySources.length} 個已同步` : '等待同步',
-      detail: newestSource?.latest ? `${newestSource.label} · ${formatKnowledgeTime(newestSource.latest.lastEditedTime)}` : sourceErrorCount ? `${sourceErrorCount} 個來源需檢查` : '尚未取得最新來源',
+      value: updateAlerts.length ? `${updateAlerts.length} 個有更新` : readySources.length ? `${readySources.length} 個已同步` : '等待同步',
+      detail: updateAlerts.length ? `${updateAlerts[0].label} 摘要可能需重整` : newestSource?.latest ? `${newestSource.label} · ${formatKnowledgeTime(newestSource.latest.lastEditedTime)}` : sourceErrorCount ? `${sourceErrorCount} 個來源需檢查` : '尚未取得最新來源',
       action: '查看來源',
       onClick: () => setFocusTab('notion')
     },
@@ -914,6 +922,26 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
             <div><h2>各來源重點</h2><span>每個資料庫或父頁只佔一格，避免單一來源洗版</span></div>
             <button onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新整理</button>
           </div>
+          {updateAlerts.length > 0 && (
+            <div className="sourceUpdateNotice">
+              <div>
+                <Bell size={17} />
+                <span>來源抓到新資料，AI 摘要可能需要更新</span>
+              </div>
+              <ul>
+                {updateAlerts.slice(0, 3).map((source) => (
+                  <li key={source.id}>
+                    <strong>{source.label}</strong>
+                    <small>{source.latest.title} · {formatKnowledgeTime(source.latest.lastEditedTime)}</small>
+                  </li>
+                ))}
+              </ul>
+              <div className="sourceUpdateActions">
+                <button type="button" onClick={() => setActiveView('knowledge')}>看資料來源</button>
+                <button type="button" onClick={() => notionData.markAllSourcesSeen()}>標為已看</button>
+              </div>
+            </div>
+          )}
           {(aiSummaryItem || notionData.aiSummary?.status === 'loading' || notionData.aiSummary?.status === 'error') && (
             <a
               className={`aiSummaryCard ${notionData.aiSummary?.status || ''}`}
@@ -945,7 +973,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                 }
               }}>
                 <div className="sourceOverviewTop">
-                  <span>{source.count} 頁</span>
+                  <span>{source.hasUpdate ? '有新資料' : `${source.count} 頁`}</span>
                   <strong>{source.label}</strong>
                   <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.message}</small>
                 </div>
@@ -1260,7 +1288,7 @@ function useErpBoardSummary() {
   return { ...state, refresh };
 }
 
-function useNotionSources(notionConfig) {
+function useNotionSources(notionConfig, setNotionConfig) {
   const configuredDatabases = getConfiguredNotionDatabases(notionConfig);
   const [liveSummaries, setLiveSummaries] = useState({});
   const [liveStatus, setLiveStatus] = useState({});
@@ -1356,14 +1384,50 @@ function useNotionSources(notionConfig) {
   const sourceBriefs = connectedSources.map((source) => {
     const items = liveSummaries[source.id] || [];
     const latest = [...items].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
+    const seenAt = notionConfig.sourceSeenAt?.[source.id] || '';
+    const hasUpdate = Boolean(latest?.lastEditedTime && (!seenAt || new Date(latest.lastEditedTime) > new Date(seenAt)));
     return {
       ...source,
       items,
       latest,
+      seenAt,
+      hasUpdate,
       status: liveStatus[source.id]?.status || (items.length ? 'ready' : 'idle'),
       message: liveStatus[source.id]?.message || (items.length ? `已讀取 ${items.length} 個頁面。` : '等待讀取')
     };
   });
+  const updateAlerts = sourceBriefs
+    .filter((source) => source.status === 'ready' && source.latest && source.hasUpdate)
+    .sort((a, b) => new Date(b.latest.lastEditedTime || 0) - new Date(a.latest.lastEditedTime || 0));
+
+  function markSourceSeen(sourceId) {
+    const source = sourceBriefs.find((item) => item.id === sourceId);
+    if (!source?.latest?.lastEditedTime || !setNotionConfig) return;
+
+    setNotionConfig((current) => ({
+      ...current,
+      sourceSeenAt: {
+        ...(current.sourceSeenAt || {}),
+        [sourceId]: source.latest.lastEditedTime
+      }
+    }));
+  }
+
+  function markAllSourcesSeen() {
+    if (!setNotionConfig) return;
+    const seenMap = sourceBriefs.reduce((next, source) => {
+      if (source.latest?.lastEditedTime) next[source.id] = source.latest.lastEditedTime;
+      return next;
+    }, {});
+
+    setNotionConfig((current) => ({
+      ...current,
+      sourceSeenAt: {
+        ...(current.sourceSeenAt || {}),
+        ...seenMap
+      }
+    }));
+  }
 
   return {
     configuredDatabases,
@@ -1374,8 +1438,11 @@ function useNotionSources(notionConfig) {
     newestItem,
     overviewBullets,
     sourceBriefs,
+    updateAlerts,
     aiSummary,
     readNotionSource,
+    markSourceSeen,
+    markAllSourcesSeen,
     refreshAll: () => {
       readAiSummaryPage();
       connectedSources.forEach((source) => readNotionSource(source));

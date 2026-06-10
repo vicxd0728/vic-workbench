@@ -31,6 +31,7 @@ function sanitizeConfig(config = {}) {
     token: '',
     defaultDatabase: config.defaultDatabase || '',
     aiSummaryPageUrl: config.aiSummaryPageUrl || '',
+    sourceSeenAt: config.sourceSeenAt || {},
     databases,
     newsKeywords: config.newsKeywords || '國際, 金融, 匯率, 供應鏈'
   };
