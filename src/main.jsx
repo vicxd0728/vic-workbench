@@ -275,6 +275,44 @@ function usePersistentState(key, fallbackValue) {
   return [value, setValue];
 }
 
+function sanitizeSyncedNotionConfig(config = {}) {
+  return {
+    workspaceUrl: config.workspaceUrl || '',
+    token: '',
+    defaultDatabase: config.defaultDatabase || '',
+    databases: config.databases || defaultNotionDatabaseConfig,
+    newsKeywords: config.newsKeywords || '國際, 金融, 匯率, 供應鏈'
+  };
+}
+
+function hasConfiguredNotionSource(config = {}) {
+  return Object.values(config.databases || {}).some((source) => source.databaseId || source.pageUrl);
+}
+
+function mergeSyncedNotionConfig(remoteConfig = {}, localConfig = {}) {
+  const remote = sanitizeSyncedNotionConfig(remoteConfig);
+  const local = sanitizeSyncedNotionConfig(localConfig);
+  const databases = { ...(remote.databases || {}) };
+
+  Object.entries(local.databases || {}).forEach(([id, source]) => {
+    if (source.databaseId || source.pageUrl) {
+      databases[id] = {
+        ...(databases[id] || {}),
+        ...source
+      };
+    }
+  });
+
+  return {
+    ...remote,
+    workspaceUrl: local.workspaceUrl || remote.workspaceUrl,
+    defaultDatabase: local.defaultDatabase || remote.defaultDatabase,
+    databases,
+    newsKeywords: local.newsKeywords || remote.newsKeywords,
+    token: ''
+  };
+}
+
 function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
@@ -334,12 +372,74 @@ function App() {
     databases: defaultNotionDatabaseConfig,
     newsKeywords: '國際, 金融, 匯率, 供應鏈'
   });
+  const settingsSyncReadyRef = useRef(false);
+  const lastSyncedNotionConfigRef = useRef('');
   const [draft, setDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [lastAction, setLastAction] = useState('準備開始');
   const newsState = useNewsBriefs();
   const notionData = useNotionSources(notionConfig);
   const erpBoard = useErpBoardSummary();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSyncedNotionConfig() {
+      try {
+        const response = await fetch('/api/settings/notion');
+        const data = await response.json();
+        if (!isMounted) return;
+
+        if (response.ok && data.ok && data.config) {
+          const remoteConfig = sanitizeSyncedNotionConfig(data.config);
+          const syncedConfig = mergeSyncedNotionConfig(data.config, notionConfig);
+          lastSyncedNotionConfigRef.current = JSON.stringify(remoteConfig);
+          setNotionConfig((current) => ({
+            ...syncedConfig,
+            token: current.token || ''
+          }));
+        } else if (hasConfiguredNotionSource(notionConfig)) {
+          const localConfig = sanitizeSyncedNotionConfig(notionConfig);
+          lastSyncedNotionConfigRef.current = JSON.stringify(localConfig);
+          fetch('/api/settings/notion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config: localConfig })
+          }).catch(() => {});
+        }
+      } catch {
+        // Keep local settings when cloud sync is unavailable.
+      } finally {
+        if (isMounted) settingsSyncReadyRef.current = true;
+      }
+    }
+
+    loadSyncedNotionConfig();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!settingsSyncReadyRef.current) return;
+
+    const syncedConfig = sanitizeSyncedNotionConfig(notionConfig);
+    const payload = JSON.stringify(syncedConfig);
+    if (payload === lastSyncedNotionConfigRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      lastSyncedNotionConfigRef.current = payload;
+      fetch('/api/settings/notion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: syncedConfig })
+      }).catch(() => {
+        lastSyncedNotionConfigRef.current = '';
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [notionConfig]);
 
   useEffect(() => {
     const requestedView = new URLSearchParams(window.location.search).get('view');
