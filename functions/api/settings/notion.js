@@ -30,6 +30,7 @@ function sanitizeConfig(config = {}) {
     workspaceUrl: config.workspaceUrl || '',
     token: '',
     defaultDatabase: config.defaultDatabase || '',
+    aiSummaryPageUrl: config.aiSummaryPageUrl || '',
     databases,
     newsKeywords: config.newsKeywords || '國際, 金融, 匯率, 供應鏈'
   };

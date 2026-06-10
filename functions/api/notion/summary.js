@@ -151,6 +151,24 @@ async function readFolder(source, token) {
   }));
 }
 
+async function readPage(source, token) {
+  const pageId = extractNotionId(source.pageUrl || source.databaseId || '');
+  if (!pageId) throw new Error('頁面連結無法解析，請貼 Notion 頁面連結。');
+
+  const page = await notionFetch(`/pages/${pageId}`, token);
+  const text = await getBlocksText(pageId, token);
+  const title = extractTitleFromProperties(page.properties) || source.label || 'Notion 摘要頁';
+
+  return [{
+    id: page.id,
+    title,
+    summary: summarizeText(text),
+    highlights: buildHighlights(text),
+    url: page.url,
+    lastEditedTime: page.last_edited_time
+  }];
+}
+
 export async function onRequestGet({ env }) {
   return json({
     connected: Boolean(env.NOTION_TOKEN),
@@ -167,12 +185,15 @@ export async function onRequestPost({ request, env }) {
     const source = body.source || {};
 
     if (!token) return json({ ok: false, message: '請先填入上方共用 API Token Key。' }, 400);
+    if (source.sourceType === 'page' && !source.pageUrl && !source.databaseId) return json({ ok: false, message: '請貼 Notion 摘要頁連結。' }, 400);
     if (source.sourceType === 'folder' && !source.pageUrl) return json({ ok: false, message: '父頁資料夾請貼 Notion 父頁連結。' }, 400);
     if (source.sourceType !== 'folder' && !source.databaseId && !source.pageUrl) return json({ ok: false, message: 'Database 模式請貼 Notion database 連結。' }, 400);
 
-    const summaries = source.sourceType === 'folder'
-      ? await readFolder(source, token)
-      : await readDatabase(source, token);
+    const summaries = source.sourceType === 'page'
+      ? await readPage(source, token)
+      : source.sourceType === 'folder'
+        ? await readFolder(source, token)
+        : await readDatabase(source, token);
 
     return json({
       ok: true,

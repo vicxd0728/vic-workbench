@@ -280,13 +280,14 @@ function sanitizeSyncedNotionConfig(config = {}) {
     workspaceUrl: config.workspaceUrl || '',
     token: '',
     defaultDatabase: config.defaultDatabase || '',
+    aiSummaryPageUrl: config.aiSummaryPageUrl || '',
     databases: config.databases || defaultNotionDatabaseConfig,
     newsKeywords: config.newsKeywords || '國際, 金融, 匯率, 供應鏈'
   };
 }
 
 function hasConfiguredNotionSource(config = {}) {
-  return Object.values(config.databases || {}).some((source) => source.databaseId || source.pageUrl);
+  return Boolean(config.aiSummaryPageUrl) || Object.values(config.databases || {}).some((source) => source.databaseId || source.pageUrl);
 }
 
 function mergeSyncedNotionConfig(remoteConfig = {}, localConfig = {}) {
@@ -307,6 +308,7 @@ function mergeSyncedNotionConfig(remoteConfig = {}, localConfig = {}) {
     ...remote,
     workspaceUrl: local.workspaceUrl || remote.workspaceUrl,
     defaultDatabase: local.defaultDatabase || remote.defaultDatabase,
+    aiSummaryPageUrl: local.aiSummaryPageUrl || remote.aiSummaryPageUrl,
     databases,
     newsKeywords: local.newsKeywords || remote.newsKeywords,
     token: ''
@@ -369,6 +371,7 @@ function App() {
     workspaceUrl: '',
     token: '',
     defaultDatabase: '',
+    aiSummaryPageUrl: '',
     databases: defaultNotionDatabaseConfig,
     newsKeywords: '國際, 金融, 匯率, 供應鏈'
   });
@@ -756,6 +759,8 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const queueCount = notes.filter((note) => !note.synced).length;
   const newestSource = [...(notionData.sourceBriefs || [])].sort((a, b) => new Date(b.latest?.lastEditedTime || 0) - new Date(a.latest?.lastEditedTime || 0))[0];
   const topBullets = notionData.overviewBullets.slice(0, 8);
+  const aiSummaryItem = notionData.aiSummary?.item;
+  const aiSummaryHighlights = aiSummaryItem?.highlights?.length ? aiSummaryItem.highlights : splitSummaryHighlights(aiSummaryItem?.summary || '');
   const [deviceStatus, setDeviceStatus] = useState({ status: 'loading', data: null });
   const deviceState = deviceStatus.data?.state;
   const temperature = deviceState?.telemetry?.temperature;
@@ -909,6 +914,28 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
             <div><h2>各來源重點</h2><span>每個資料庫或父頁只佔一格，避免單一來源洗版</span></div>
             <button onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新整理</button>
           </div>
+          {(aiSummaryItem || notionData.aiSummary?.status === 'loading' || notionData.aiSummary?.status === 'error') && (
+            <a
+              className={`aiSummaryCard ${notionData.aiSummary?.status || ''}`}
+              href={aiSummaryItem?.url || undefined}
+              target={aiSummaryItem?.url ? '_blank' : undefined}
+              rel={aiSummaryItem?.url ? 'noreferrer' : undefined}
+              onClick={(event) => {
+                if (!aiSummaryItem?.url) event.preventDefault();
+              }}
+            >
+              <div className="aiSummaryHead">
+                <span><Sparkles size={16} /> AI 總覽摘要</span>
+                <small>{aiSummaryItem?.lastEditedTime ? `更新 ${formatKnowledgeTime(aiSummaryItem.lastEditedTime)}` : notionData.aiSummary?.message}</small>
+              </div>
+              <strong>{aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常')}</strong>
+              {aiSummaryHighlights.length > 0 ? (
+                <ul>{aiSummaryHighlights.slice(0, 5).map((text) => <li key={text}>{text}</li>)}</ul>
+              ) : (
+                <p>{notionData.aiSummary?.message || '請在 Notion AI 摘要頁放入今日重點、風險與下一步。'}</p>
+              )}
+            </a>
+          )}
           <div className="sourceOverviewGrid">
             {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (
               <a className="sourceOverviewCard" href={source.href || undefined} target={source.href ? '_blank' : undefined} rel={source.href ? 'noreferrer' : undefined} key={source.id} onClick={(event) => {
@@ -1237,6 +1264,7 @@ function useNotionSources(notionConfig) {
   const configuredDatabases = getConfiguredNotionDatabases(notionConfig);
   const [liveSummaries, setLiveSummaries] = useState({});
   const [liveStatus, setLiveStatus] = useState({});
+  const [aiSummary, setAiSummary] = useState({ status: 'idle', item: null, message: '尚未設定 AI 摘要頁。' });
   const connectedSources = useMemo(
     () => configuredDatabases.filter((item) => item.databaseId || item.pageUrl),
     [configuredDatabases.map((source) => `${source.id}:${source.databaseId || source.pageUrl}:${source.analysisLimit}:${source.sortMode}`).join('|')]
@@ -1275,12 +1303,52 @@ function useNotionSources(notionConfig) {
     }
   }
 
+  async function readAiSummaryPage() {
+    const pageUrl = notionConfig.aiSummaryPageUrl?.trim();
+    if (!pageUrl) {
+      setAiSummary({ status: 'idle', item: null, message: '尚未設定 AI 摘要頁。' });
+      return;
+    }
+
+    setAiSummary((current) => ({ ...current, status: 'loading', message: '正在讀取 Notion AI 摘要頁...' }));
+
+    try {
+      const response = await fetch('/api/notion/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: {
+            id: 'ai-summary',
+            label: 'AI 總覽摘要',
+            sourceType: 'page',
+            pageUrl,
+            analysisLimit: 1
+          }
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || 'Notion AI 摘要頁讀取失敗。');
+
+      setAiSummary({
+        status: 'ready',
+        item: data.summaries?.[0] || null,
+        message: data.summaries?.[0] ? '已讀取 AI 摘要頁。' : '摘要頁目前沒有可顯示內容。'
+      });
+    } catch (error) {
+      setAiSummary({ status: 'error', item: null, message: error.message || 'Notion AI 摘要頁讀取失敗。' });
+    }
+  }
+
   useEffect(() => {
     connectedSources.forEach((source) => {
       if (liveSummaries[source.id] || liveStatus[source.id]?.status === 'loading') return;
       readNotionSource(source);
     });
   }, [connectedSources.map((source) => `${source.id}:${source.databaseId || source.pageUrl}`).join('|')]);
+
+  useEffect(() => {
+    readAiSummaryPage();
+  }, [notionConfig.aiSummaryPageUrl]);
 
   const allLiveItems = connectedSources.flatMap((source) => (liveSummaries[source.id] || []).map((item) => ({ ...item, sourceLabel: source.label, sourceId: source.id })));
   const newestItem = [...allLiveItems].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
@@ -1306,8 +1374,12 @@ function useNotionSources(notionConfig) {
     newestItem,
     overviewBullets,
     sourceBriefs,
+    aiSummary,
     readNotionSource,
-    refreshAll: () => connectedSources.forEach((source) => readNotionSource(source))
+    refreshAll: () => {
+      readAiSummaryPage();
+      connectedSources.forEach((source) => readNotionSource(source));
+    }
   };
 }
 
@@ -1691,7 +1763,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       <div className="settingsTabs settingsTabsWide" role="tablist" aria-label="系統設定">
         {[
           ['sources', '資料來源', `${connectedSources}/${configuredDatabases.length} 已設定`],
-          ['ai', 'AI 彙整', '規則摘要 / 待接模型'],
+          ['ai', 'AI 彙整', notionConfig.aiSummaryPageUrl ? '已設定摘要頁' : '設定摘要頁'],
           ['device', '遠端電腦', '狀態與電源'],
           ['security', '安全性', tokenStatusLabel],
           ['deploy', '部署', 'GitHub / Cloudflare']
@@ -1766,10 +1838,21 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
 
       {activeSettingsTab === 'ai' && (
         <div className="settingsPanel">
+          <div className="notionSetup focused aiSummarySetup">
+            <label>
+              <span>Notion AI 摘要頁連結</span>
+              <input
+                value={notionConfig.aiSummaryPageUrl || ''}
+                onChange={(event) => updateConfig('aiSummaryPageUrl', event.target.value)}
+                placeholder="貼上 Notion AI 整理後的摘要頁連結"
+              />
+            </label>
+            <p>做法：在 Notion 用 AI 或代理程式整理多個來源，寫入這個專用頁。首頁會優先讀這頁；原始資料仍放在「資料來源」分頁。</p>
+          </div>
           <div className="settingsInfoGrid">
-            <article><Wand2 size={18} /><strong>目前模式</strong><p>Notion 頁面會先由程式抽取摘要與 highlights，首頁依來源與更新時間呈現。</p></article>
-            <article><Sparkles size={18} /><strong>下一階段</strong><p>新增 AI 彙整 API，把多個來源整理成「總結、風險、下一步、待確認」。</p></article>
-            <article><ShieldAlert size={18} /><strong>建議做法</strong><p>模型金鑰放 Cloudflare，不放前端；摘要結果快取，避免每次開頁都重算。</p></article>
+            <article><Wand2 size={18} /><strong>目前模式</strong><p>首頁先顯示 Notion AI 摘要頁，讓總覽更像決策看板，而不是原始資料清單。</p></article>
+            <article><Sparkles size={18} /><strong>Notion AI</strong><p>Notion AI 目前由 Notion 內部操作與寫入摘要頁；Vic Workbench 負責讀取結果。</p></article>
+            <article><ShieldAlert size={18} /><strong>成本控制</strong><p>不使用 OpenAI API 也不把模型金鑰放前端；成本由你的 Notion AI 方案承擔。</p></article>
           </div>
           <div className="resultGrid">
             {configuredDatabases.map((config) => {
