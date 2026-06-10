@@ -994,18 +994,47 @@ function splitSummaryHighlights(text = '') {
     .slice(0, 3);
 }
 
-function buildKnowledgeBullets(items = []) {
-  return items.flatMap((item) => {
+function buildKnowledgeBullets(items = [], limit = 8) {
+  const bulletItems = items.map((item) => {
     const highlights = item.highlights?.length ? item.highlights : splitSummaryHighlights(item.summary);
-    return (highlights.length ? highlights : [item.summary || item.title]).map((text) => ({
+    const text = highlights[0] || item.summary || item.title;
+    return {
       id: `${item.id || item.title}-${text}`,
       title: item.title,
       sourceLabel: item.sourceLabel,
+      sourceId: item.sourceId || item.sourceLabel || 'unknown',
       url: item.url,
       time: item.lastEditedTime,
       text
-    }));
+    };
   });
+
+  const groups = new Map();
+  bulletItems.forEach((item) => {
+    if (!groups.has(item.sourceId)) groups.set(item.sourceId, []);
+    groups.get(item.sourceId).push(item);
+  });
+
+  const sortedGroups = [...groups.values()]
+    .map((group) => group.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0)))
+    .sort((a, b) => new Date(b[0]?.time || 0) - new Date(a[0]?.time || 0));
+
+  const balanced = [];
+  let round = 0;
+  while (balanced.length < limit) {
+    let added = false;
+    sortedGroups.forEach((group) => {
+      if (balanced.length >= limit) return;
+      if (group[round]) {
+        balanced.push(group[round]);
+        added = true;
+      }
+    });
+    if (!added) break;
+    round += 1;
+  }
+
+  return balanced;
 }
 
 function useErpBoardSummary() {
@@ -1083,7 +1112,7 @@ function useNotionSources(notionConfig) {
 
   const allLiveItems = connectedSources.flatMap((source) => (liveSummaries[source.id] || []).map((item) => ({ ...item, sourceLabel: source.label, sourceId: source.id })));
   const newestItem = [...allLiveItems].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
-  const overviewBullets = buildKnowledgeBullets(allLiveItems).slice(0, 8);
+  const overviewBullets = buildKnowledgeBullets(allLiveItems, 8);
   const sourceBriefs = connectedSources.map((source) => {
     const items = liveSummaries[source.id] || [];
     const latest = [...items].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
