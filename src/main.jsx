@@ -689,6 +689,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       count: source.items.length,
       latest,
       recentItems,
+      href: latest?.url || source.pageUrl || source.databaseId || '',
       status: source.status,
       message: source.message,
       highlights: highlights.slice(0, 3)
@@ -777,7 +778,12 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           </div>
           <div className="sourceOverviewGrid">
             {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (
-              <button className="sourceOverviewCard" key={source.id} onClick={() => setActiveView('knowledge')}>
+              <a className="sourceOverviewCard" href={source.href || undefined} target={source.href ? '_blank' : undefined} rel={source.href ? 'noreferrer' : undefined} key={source.id} onClick={(event) => {
+                if (!source.href) {
+                  event.preventDefault();
+                  setActiveView('knowledge');
+                }
+              }}>
                 <div className="sourceOverviewTop">
                   <span>{source.type} · {source.count} 頁</span>
                   <strong>{source.label}</strong>
@@ -790,10 +796,17 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                 )}
                 {source.recentItems.length > 1 && (
                   <div className="sourceRecentLine">
-                    {source.recentItems.slice(1).map((item) => <span key={item.id}>{item.title}</span>)}
+                    {source.recentItems.slice(1).map((item) => (
+                      <span key={item.id} onClick={(event) => {
+                        if (!item.url) return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        window.open(item.url, '_blank', 'noopener,noreferrer');
+                      }}>{item.title}</span>
+                    ))}
                   </div>
                 )}
-              </button>
+              </a>
             )) : (
               <div className="dashboardEmpty"><BookOpen size={18} />正在讀取 Notion；若一直沒有資料，請確認來源頁面已分享給 integration。</div>
             )}
