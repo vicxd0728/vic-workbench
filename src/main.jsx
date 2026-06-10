@@ -337,6 +337,44 @@ function extractKeyPoints(text) {
   return Array.from(new Set(sorted)).slice(0, 5);
 }
 
+function parseAiSummarySections(text = '') {
+  const sectionLabels = ['今日重點', '風險', '下一步', '值得查看', 'ERP 重點', '新聞重點', '補充備註'];
+  const sections = [];
+  let current = null;
+
+  text.split(/\n+/).forEach((rawLine) => {
+    const line = rawLine.replace(/^#+\s*/, '').trim();
+    if (!line || line.startsWith('Vic Workbench')) return;
+
+    if (line.startsWith('最後更新')) {
+      sections.push({ title: '最後更新', items: [line.replace(/^最後更新[:：]\s*/, '')] });
+      return;
+    }
+
+    const matchedLabel = sectionLabels.find((label) => line === label || line.startsWith(`${label}：`) || line.startsWith(`${label}:`));
+    if (matchedLabel) {
+      current = { title: matchedLabel, items: [] };
+      sections.push(current);
+      const inlineText = line.replace(matchedLabel, '').replace(/^[:：]\s*/, '').trim();
+      if (inlineText) current.items.push(inlineText);
+      return;
+    }
+
+    const normalizedLine = line.replace(/^[-*•]\s*/, '').replace(/^\[[ xX]\]\s*/, '').trim();
+    if (!normalizedLine) return;
+    if (!current) {
+      current = { title: '摘要', items: [] };
+      sections.push(current);
+    }
+    current.items.push(normalizedLine);
+  });
+
+  return sections
+    .map((section) => ({ ...section, items: section.items.filter(Boolean).slice(0, 5) }))
+    .filter((section) => section.items.length)
+    .slice(0, 7);
+}
+
 function getConfiguredNotionDatabases(notionConfig) {
   const configs = normalizeNotionDatabaseConfigs(notionConfig);
 
@@ -761,6 +799,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const topBullets = notionData.overviewBullets.slice(0, 8);
   const aiSummaryItem = notionData.aiSummary?.item;
   const aiSummaryHighlights = aiSummaryItem?.highlights?.length ? aiSummaryItem.highlights : splitSummaryHighlights(aiSummaryItem?.summary || '');
+  const aiSummarySections = parseAiSummarySections(aiSummaryItem?.contentText || '');
   const [deviceStatus, setDeviceStatus] = useState({ status: 'loading', data: null });
   const deviceState = deviceStatus.data?.state;
   const temperature = deviceState?.telemetry?.temperature;
@@ -929,7 +968,16 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                 <small>{aiSummaryItem?.lastEditedTime ? `更新 ${formatKnowledgeTime(aiSummaryItem.lastEditedTime)}` : notionData.aiSummary?.message}</small>
               </div>
               <strong>{aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常')}</strong>
-              {aiSummaryHighlights.length > 0 ? (
+              {aiSummarySections.length > 0 ? (
+                <div className="aiSummarySectionGrid">
+                  {aiSummarySections.map((section) => (
+                    <section className={`aiSummarySection section-${section.title.replace(/\s+/g, '')}`} key={section.title}>
+                      <span>{section.title}</span>
+                      <ul>{section.items.map((text) => <li key={text}>{text}</li>)}</ul>
+                    </section>
+                  ))}
+                </div>
+              ) : aiSummaryHighlights.length > 0 ? (
                 <ul>{aiSummaryHighlights.slice(0, 5).map((text) => <li key={text}>{text}</li>)}</ul>
               ) : (
                 <p>{notionData.aiSummary?.message || '請在 Notion AI 摘要頁放入今日重點、風險與下一步。'}</p>
