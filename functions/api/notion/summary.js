@@ -164,7 +164,6 @@ async function readPage(source, token) {
     title,
     summary: summarizeText(text),
     highlights: buildHighlights(text),
-    contentText: text,
     url: page.url,
     lastEditedTime: page.last_edited_time
   }];
