@@ -470,27 +470,33 @@ a {
 
 .dashboardFocusTabs {
   display: inline-grid;
-  grid-template-columns: repeat(4, minmax(84px, 1fr));
-  width: min(100%, 520px);
+  grid-template-columns: repeat(5, minmax(78px, 1fr));
+  width: min(100%, 620px);
   padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
+  border: 1px solid rgba(125, 166, 217, 0.22);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.58);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.035) inset;
 }
 
 .dashboardFocusTabs button {
   min-height: 34px;
-  border-radius: 6px;
-  color: var(--muted);
+  border-radius: 8px;
+  color: #9fb2cc;
   font-size: 13px;
   font-weight: 850;
+  outline: 0;
 }
 
 .dashboardFocusTabs button:hover,
 .dashboardFocusTabs .activeFocusTab {
-  background: #fff;
-  color: var(--text);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+  background: rgba(56, 189, 248, 0.12);
+  color: #f8fbff;
+  box-shadow: 0 0 0 1px rgba(125, 211, 252, 0.22) inset;
+}
+
+.dashboardFocusTabs button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.48) inset;
 }
 
 .compactWelcome {
@@ -587,6 +593,7 @@ a {
 
 .dashboardLayout.focus-erp,
 .dashboardLayout.focus-notion,
+.dashboardLayout.focus-news,
 .dashboardLayout.focus-device {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -803,6 +810,66 @@ a {
   padding: 4px 7px;
   border-radius: 6px;
   background: rgba(37, 99, 235, 0.08);
+}
+
+.newsPreview {
+  grid-column: 1 / -1;
+}
+
+.newsDigestGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.newsDigestCard {
+  display: grid;
+  gap: 7px;
+  min-height: 142px;
+  align-content: start;
+  padding: 13px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.newsDigestCard span,
+.newsDigestCard p,
+.newsTickerList span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.newsDigestCard strong,
+.newsTickerList strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.newsDigestCard p {
+  margin: 0;
+}
+
+.newsTickerList {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--line-soft);
+}
+
+.newsTickerList a {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 42px;
+  padding: 9px 11px;
+  background: #fff;
 }
 
 .systemRows {
@@ -3362,6 +3429,7 @@ body {
 .updateTable,
 .sourceStatusTable,
 .sourceOverviewGrid,
+.newsTickerList,
 .systemRows {
   border-color: rgba(125, 166, 217, 0.22);
   background: rgba(125, 166, 217, 0.18);
@@ -3379,6 +3447,8 @@ body {
 .sourceStatusTable button,
 .sourceOverviewCard,
 .sourceDigestCard,
+.newsDigestCard,
+.newsTickerList a,
 .erpMetricGrid div,
 .erpRows div {
   background: linear-gradient(180deg, rgba(15, 27, 48, 0.9), rgba(9, 18, 34, 0.84));
@@ -3393,6 +3463,8 @@ body {
 .sourceStatusTable strong,
 .sourceOverviewCard strong,
 .sourceDigestCard strong,
+.newsDigestCard strong,
+.newsTickerList strong,
 .erpMetricGrid strong,
 .erpRows strong,
 .statusStrip strong {
@@ -3417,6 +3489,9 @@ body {
 .sourceDigestCard small,
 .sourceDigestCard p,
 .sourceDigestCard li,
+.newsDigestCard span,
+.newsDigestCard p,
+.newsTickerList span,
 .erpMetricGrid span,
 .erpMetricGrid small,
 .erpRows span,
@@ -3438,6 +3513,7 @@ body {
 .sourceStatusTable button:hover,
 .sourceOverviewCard:hover,
 .sourceDigestCard:hover,
+.newsTickerList a:hover,
 .quickPowerGrid button:hover {
   border-color: rgba(125, 211, 252, 0.42);
   background: rgba(56, 189, 248, 0.08);
@@ -3514,6 +3590,7 @@ body {
   .settingsTabsWide,
   .settingsInfoGrid,
   .sourceOverviewGrid,
+  .newsDigestGrid,
   .sourceDigestGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3612,6 +3689,8 @@ body {
   .statusStrip,
   .attentionPanel,
   .attentionList,
+  .newsDigestGrid,
+  .newsTickerList a,
   .erpMetricGrid,
   .erpRows,
   .quickPowerGrid {

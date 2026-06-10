@@ -60,9 +60,9 @@ const navItems = [
   { id: 'today', label: '總覽', icon: Home },
   { id: 'inbox', label: '快速紀錄', icon: Inbox },
   { id: 'projects', label: '專案', icon: FolderKanban },
-  { id: 'knowledge', label: 'Notion / 知識庫', icon: BookOpen },
-  { id: 'news', label: '新聞情報', icon: Newspaper },
-  { id: 'automation', label: '自動化', icon: Zap }
+  { id: 'knowledge', label: '資料來源', icon: BookOpen },
+  { id: 'news', label: '新聞', icon: Newspaper },
+  { id: 'automation', label: '設置', icon: Zap }
 ];
 
 const captureTypes = [
@@ -492,7 +492,7 @@ function ActiveView(props) {
     return (
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
-          <PageHeader title="Notion / 知識庫" subtitle="分層查看不同資料庫的摘要，需要細節時再點進 Notion 原頁。" />
+          <PageHeader title="資料來源" subtitle="分層查看不同資料庫的摘要，需要細節時再點進 Notion 原頁。" />
           <NotionWorkspace notionConfig={notionConfig} notionData={notionData} />
         </div>
         <aside className="insightRail">
@@ -540,7 +540,7 @@ function ActiveView(props) {
     return (
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
-          <PageHeader title="新聞情報" subtitle="未來串接最新國際、金融與供應鏈資訊；首頁只放最高優先摘要。" />
+          <PageHeader title="新聞" subtitle="整理最新國際、金融與供應鏈資訊；首頁只放最高優先摘要。" />
           <NewsWorkspace newsState={newsState} />
         </div>
         <aside className="insightRail">
@@ -577,6 +577,7 @@ function ActiveView(props) {
           projects={projects}
           setActiveView={setActiveView}
           notionData={notionData}
+          newsState={newsState}
           erpBoard={erpBoard}
         />
       </div>
@@ -649,7 +650,7 @@ function PageHeader({ title, subtitle }) {
   );
 }
 
-function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData, erpBoard }) {
+function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData, newsState, erpBoard }) {
   const [focusTab, setFocusTab] = useState('overview');
   const importantTasks = tasks.filter((task) => !task.done).slice(0, 3);
   const queueCount = notes.filter((note) => !note.synced).length;
@@ -676,6 +677,8 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     ['C端出貨中', erpData?.corderShipping ?? '--', 'C端尚未完成'],
     ['請假待審', erpData?.leavePending ?? '--', '人員審核']
   ];
+  const newsHighlights = (newsState?.briefs?.length ? newsState.briefs : newsBriefs).slice(0, 4);
+  const newsItems = (newsState?.items || []).slice(0, 6);
   const sourceDigestCards = notionData.sourceBriefs.map((source) => {
     const latest = source.latest;
     const highlights = latest?.highlights?.length ? latest.highlights : splitSummaryHighlights(latest?.summary || '');
@@ -685,7 +688,6 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     return {
       id: source.id,
       label: source.label,
-      type: source.sourceType === 'folder' ? '父頁資料夾' : 'Database',
       count: source.items.length,
       latest,
       recentItems,
@@ -707,10 +709,12 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     { id: 'overview', label: '重點' },
     { id: 'erp', label: 'ERP' },
     { id: 'notion', label: 'Notion' },
+    { id: 'news', label: '新聞' },
     { id: 'device', label: '裝置' }
   ];
   const showNotion = focusTab === 'overview' || focusTab === 'notion';
   const showNotionDetail = focusTab === 'notion';
+  const showNews = focusTab === 'news';
   const showDevice = focusTab === 'device';
   const showErp = focusTab === 'overview' || focusTab === 'erp';
 
@@ -785,7 +789,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                 }
               }}>
                 <div className="sourceOverviewTop">
-                  <span>{source.type} · {source.count} 頁</span>
+                  <span>{source.count} 頁</span>
                   <strong>{source.label}</strong>
                   <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.message}</small>
                 </div>
@@ -829,6 +833,32 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
             <button onClick={() => setActiveView('automation')}><RotateCcw size={17} /><span>重開機</span></button>
           </div>
         </aside>}
+
+        {showNews && <section className="dashboardSubPanel newsPreview">
+          <div className="dashboardPanelHeader">
+            <div><h2>新聞重點</h2><span>{newsState?.status === 'ready' ? '已整理最新 RSS 摘要' : '等待新聞來源更新'}</span></div>
+            <button onClick={() => setActiveView('news')}>看全部 <ChevronRight size={15} /></button>
+          </div>
+          <div className="newsDigestGrid">
+            {newsHighlights.map((item) => (
+              <article className="newsDigestCard" key={`${item.topic}-${item.title}`}>
+                <span>{item.topic}</span>
+                <strong>{item.title}</strong>
+                <p>{item.summary}</p>
+              </article>
+            ))}
+          </div>
+          {newsItems.length > 0 && (
+            <div className="newsTickerList">
+              {newsItems.map((item) => (
+                <a href={item.url || undefined} target={item.url ? '_blank' : undefined} rel={item.url ? 'noreferrer' : undefined} key={item.id || item.url || item.title}>
+                  <span>{item.source} · {item.topic}</span>
+                  <strong>{item.title}</strong>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>}
 
         {showNotionDetail && <section className="dashboardSubPanel">
           <div className="dashboardPanelHeader">
@@ -1190,7 +1220,7 @@ function NotionWorkspace({ notionConfig, notionData }) {
 
   return (
     <section className="panel notionWorkspace">
-      <div className="panelTitle"><h2>Notion Dashboard <small>{configuredDatabases.length}</small></h2><span>自訂資料庫摘要</span></div>
+      <div className="panelTitle"><h2>資料來源總覽 <small>{configuredDatabases.length}</small></h2><span>自訂資料庫摘要</span></div>
       <div className="notionDashboardGrid">
         <article>
           <span>資料庫</span>
@@ -1948,7 +1978,7 @@ function FocusPanel({ stats }) {
         <Metric label="已完成" value={stats.completed} />
         <Metric label="待同步" value={stats.syncQueue} />
       </div>
-      <div className="focusCallout"><CheckCircle2 size={22} /><p><strong>建議先做</strong>首頁只看摘要，細節進 Notion / 知識庫分頁。</p></div>
+      <div className="focusCallout"><CheckCircle2 size={22} /><p><strong>建議先做</strong>首頁只看摘要，細節進資料來源分頁。</p></div>
     </section>
   );
 }
