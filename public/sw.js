@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vic-workbench-v3';
+﻿const CACHE_NAME = 'vic-workbench-v4';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -63,3 +63,4 @@ self.addEventListener('fetch', (event) => {
     }))
   );
 });
+
