@@ -176,45 +176,84 @@ const newsBriefs = [
   { topic: '尚未載入', title: '新聞 RSS 等待連線', summary: '部署到 Cloudflare 後會由 /api/news/brief 抓取中文新聞與金融資訊。' }
 ];
 
+const newsRefreshIntervalMs = 30 * 60 * 1000;
+const newsKeywords = ['AI', '匯率', '關稅', '供應鏈', 'Fed', '美元', '利率', '通膨', '半導體', '原油'];
+
 function useNewsBriefs() {
   const [newsState, setNewsState] = useState({
     status: 'loading',
     briefs: newsBriefs,
     items: [],
     sources: [],
-    fetchedAt: null
+    fetchedAt: null,
+    error: '',
+    keywordHits: []
   });
 
+  const refresh = useCallback(async ({ silent = false } = {}) => {
+    setNewsState((current) => ({ ...current, status: silent && current.items.length ? 'refreshing' : 'loading', error: '' }));
+
+    try {
+      const response = await fetch(`/api/news/brief?limit=18&t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const items = data.items || [];
+      const keywordHits = newsKeywords
+        .map((keyword) => ({
+          keyword,
+          count: items.filter((item) => `${item.title} ${item.summary}`.includes(keyword)).length
+        }))
+        .filter((item) => item.count > 0)
+        .sort((a, b) => b.count - a.count);
+
+      setNewsState({
+        status: 'ready',
+        briefs: data.briefs?.length ? data.briefs : newsBriefs,
+        items,
+        sources: data.sources || [],
+        fetchedAt: data.fetchedAt || new Date().toISOString(),
+        error: '',
+        keywordHits
+      });
+    } catch (error) {
+      setNewsState((current) => ({
+        ...current,
+        status: current.items.length ? 'stale' : 'fallback',
+        error: error.message || '新聞讀取失敗。'
+      }));
+    }
+  }, []);
+
   useEffect(() => {
-    let isMounted = true;
+    refresh();
+  }, [refresh]);
 
-    async function loadNews() {
-      try {
-        const response = await fetch('/api/news/brief?limit=18');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (!isMounted) return;
-
-        setNewsState({
-          status: 'ready',
-          briefs: data.briefs?.length ? data.briefs : newsBriefs,
-          items: data.items || [],
-          sources: data.sources || [],
-          fetchedAt: data.fetchedAt || null
-        });
-      } catch {
-        if (!isMounted) return;
-        setNewsState((current) => ({ ...current, status: 'fallback' }));
+  useEffect(() => {
+    function refreshWhenVisible() {
+      if (document.visibilityState !== 'visible') return;
+      const lastFetched = newsState.fetchedAt ? new Date(newsState.fetchedAt).getTime() : 0;
+      if (!lastFetched || Date.now() - lastFetched >= newsRefreshIntervalMs) {
+        refresh({ silent: true });
       }
     }
 
-    loadNews();
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
     return () => {
-      isMounted = false;
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
     };
-  }, []);
+  }, [newsState.fetchedAt, refresh]);
 
-  return newsState;
+  return {
+    ...newsState,
+    isRefreshing: newsState.status === 'loading' || newsState.status === 'refreshing',
+    isStale: Boolean(newsState.fetchedAt && Date.now() - new Date(newsState.fetchedAt).getTime() >= newsRefreshIntervalMs),
+    refresh
+  };
 }
 
 function usePwaInstall() {
@@ -789,6 +828,8 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const newsHighlights = (newsState?.briefs?.length ? newsState.briefs : newsBriefs).slice(0, 4);
   const newsItems = (newsState?.items || []).slice(0, 6);
   const topNews = newsHighlights[0];
+  const newsUpdatedLabel = newsState?.fetchedAt ? formatKnowledgeTime(newsState.fetchedAt) : '尚未更新';
+  const newsHitLabel = newsState?.keywordHits?.length ? `${newsState.keywordHits[0].keyword} ${newsState.keywordHits[0].count} 則` : '無關鍵字命中';
   const sourceDigestCards = notionData.sourceBriefs.map((source) => {
     const latest = source.latest;
     const highlights = latest?.highlights?.length ? latest.highlights : splitSummaryHighlights(latest?.summary || '');
@@ -1020,8 +1061,8 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
 
         {showNews && <section className="dashboardSubPanel newsPreview">
           <div className="dashboardPanelHeader">
-            <div><h2>新聞重點</h2><span>{newsState?.status === 'ready' ? '已整理最新 RSS 摘要' : '等待新聞來源更新'}</span></div>
-            <button onClick={() => setActiveView('news')}>看全部 <ChevronRight size={15} /></button>
+            <div><h2>新聞重點</h2><span>{newsState?.status === 'ready' ? `更新 ${newsUpdatedLabel} · ${newsHitLabel}` : '等待新聞來源更新'}</span></div>
+            <button onClick={() => newsState.refresh({ silent: true })} disabled={newsState.isRefreshing}><RotateCcw size={15} />{newsState.isRefreshing ? '更新中' : '重新整理'}</button>
           </div>
           <div className="newsDigestGrid">
             {newsHighlights.map((item) => (
@@ -1613,11 +1654,32 @@ function NotionWorkspace({ notionConfig, notionData }) {
 }
 
 function NewsWorkspace({ newsState }) {
-  const statusLabel = newsState.status === 'ready' ? 'RSS 已更新' : '等待線上連線';
+  const statusLabel = newsState.status === 'ready'
+    ? `RSS 已更新 · ${newsState.fetchedAt ? formatKnowledgeTime(newsState.fetchedAt) : '剛剛'}`
+    : newsState.status === 'refreshing'
+      ? '正在重新整理'
+      : newsState.status === 'stale'
+        ? '保留上一輪資料'
+        : '等待線上連線';
 
   return (
     <section className="panel notionWorkspace">
-      <div className="panelTitle"><h2>新聞專區 <small>{newsState.briefs.length}</small></h2><span>{statusLabel}</span></div>
+      <div className="panelTitle">
+        <h2>新聞專區 <small>{newsState.briefs.length}</small></h2>
+        <span>{statusLabel}</span>
+        <button className="plainIcon" onClick={() => newsState.refresh({ silent: true })} disabled={newsState.isRefreshing} aria-label="重新整理新聞"><RotateCcw size={17} /></button>
+      </div>
+      <div className="newsRefreshBar">
+        <div>
+          <strong>{newsState.isStale ? '新聞可能需要更新' : '更新頻率正常'}</strong>
+          <span>開啟 App 會抓一次；回到前景超過 30 分鐘會自動刷新，也可手動更新。</span>
+        </div>
+        {newsState.keywordHits?.length > 0 && (
+          <div className="keywordHits">
+            {newsState.keywordHits.slice(0, 5).map((item) => <span key={item.keyword}>{item.keyword} {item.count}</span>)}
+          </div>
+        )}
+      </div>
       <div className="newsGrid">
         {newsState.briefs.map((item) => (
           <article key={item.topic}><Newspaper size={17} /><span>{item.topic}</span><strong>{item.title}</strong><p>{item.summary}</p></article>
@@ -1642,6 +1704,7 @@ function NewsWorkspace({ newsState }) {
           來源：{newsState.sources.map((source) => `${source.source}${source.ok ? '' : '失敗'}`).join('、')}
         </div>
       )}
+      {newsState.error && <div className="sourceLine">狀態：{newsState.error}</div>}
     </section>
   );
 }
@@ -2333,10 +2396,12 @@ function MiniSummary({ title, action, onClick, items, sourceBriefs = [] }) {
 
 function MiniNews({ onClick, newsState }) {
   const briefs = newsState?.briefs?.length ? newsState.briefs : newsBriefs;
+  const updatedLabel = newsState?.fetchedAt ? formatKnowledgeTime(newsState.fetchedAt) : '尚未更新';
 
   return (
     <section className="panel">
       <div className="railTitle"><h2>新聞快訊</h2><button onClick={onClick}>看更多</button></div>
+      <div className="miniMeta">更新 {updatedLabel}</div>
       <div className="miniList">
         {briefs.slice(0, 2).map((item) => <article key={item.topic}><strong>{item.topic}</strong><p>{item.summary}</p></article>)}
       </div>

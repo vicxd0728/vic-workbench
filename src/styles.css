@@ -156,6 +156,55 @@
   border-color: rgba(250, 204, 21, 0.45);
 }
 
+.newsRefreshBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.newsRefreshBar div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.newsRefreshBar strong {
+  color: #f8fafc;
+}
+
+.newsRefreshBar span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.keywordHits {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.keywordHits span {
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #bae6fd;
+  background: rgba(14, 165, 233, 0.1);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.miniMeta {
+  margin: -4px 0 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -3849,6 +3898,15 @@ body {
 }
 
 @media (max-width: 760px) {
+  .newsRefreshBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .keywordHits {
+    justify-content: flex-start;
+  }
+
   .workspace {
     display: block;
   }
