@@ -4,6 +4,7 @@ const CONFIRMATIONS = {
   shutdown: '關機',
   restart: '重開機',
   sleep: '睡眠',
+  'memory-clean': '清理',
   cancel: '取消'
 };
 
@@ -41,7 +42,9 @@ export async function onRequestPost({ request, env }) {
       return json({ ok: true, command });
     }
 
-    const graceSeconds = Math.min(300, Math.max(10, Number(body.graceSeconds || 30)));
+    const graceSeconds = action === 'memory-clean'
+      ? 0
+      : Math.min(300, Math.max(10, Number(body.graceSeconds || 30)));
     const wakeAfterMinutes = action === 'sleep'
       ? Math.min(480, Math.max(0, Number(body.wakeAfterMinutes || 0)))
       : 0;

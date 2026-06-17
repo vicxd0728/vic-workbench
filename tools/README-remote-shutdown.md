@@ -1,7 +1,8 @@
 # Remote Power Agent
 
-This agent lets Vic Workbench queue shutdown, restart, sleep, and cancel commands through Cloudflare Pages.
+This agent lets Vic Workbench queue memory cleanup, shutdown, restart, sleep, and cancel commands through Cloudflare Pages.
 Sleep commands can optionally create a Windows wake timer before sleeping, such as waking again after 15, 30, or 60 minutes.
+Memory cleanup removes safe temporary files and asks Windows/.NET to run garbage collection. It does not close apps or kill processes.
 
 ## Test Mode
 

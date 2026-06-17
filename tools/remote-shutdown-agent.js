@@ -175,6 +175,12 @@ async function runCommand(command) {
       return;
     }
 
+    if (action === 'memory-clean') {
+      const result = await cleanMemory();
+      await acknowledge(command, 'executed', result);
+      return;
+    }
+
     if (action === 'sleep') {
       const wakeAfterMinutes = Math.min(480, Math.max(0, Number(command.wakeAfterMinutes || 0)));
       if (wakeAfterMinutes > 0) {
@@ -193,6 +199,31 @@ async function runCommand(command) {
   } catch (error) {
     await acknowledge(command, 'failed', error.message);
   }
+}
+
+async function cleanMemory() {
+  const before = os.freemem();
+  const script = [
+    `$ErrorActionPreference = 'SilentlyContinue'`,
+    `$targets = @($env:TEMP, "$env:WINDIR\\Temp") | Where-Object { $_ -and (Test-Path $_) }`,
+    `$removed = 0`,
+    `foreach ($target in $targets) {`,
+    `  Get-ChildItem -LiteralPath $target -Force -Recurse | Where-Object { -not $_.PSIsContainer } | ForEach-Object {`,
+    `    Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue`,
+    `    if (-not (Test-Path -LiteralPath $_.FullName)) { $removed++ }`,
+    `  }`,
+    `}`,
+    `[System.GC]::Collect()`,
+    `[System.GC]::WaitForPendingFinalizers()`,
+    `[System.GC]::Collect()`,
+    `Write-Output $removed`
+  ].join('; ');
+
+  const output = await exec('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script]);
+  const removed = Number(String(output).trim().split(/\s+/).pop()) || 0;
+  const after = os.freemem();
+  const freedMb = Math.max(0, Math.round((after - before) / 1024 / 1024));
+  return `Memory cleanup completed. Temp files removed: ${removed}. Free memory changed by about ${freedMb} MB.`;
 }
 
 async function scheduleWakeTimer(minutes) {

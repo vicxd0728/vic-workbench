@@ -2006,7 +2006,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       {activeSettingsTab === 'device' && (
         <div className="settingsPanel">
           <div className="settingsInfoGrid">
-            <article><Wifi size={18} /><strong>代理程式</strong><p>本機 `remote-shutdown-agent.js` 會每 10 秒回報電腦狀態，並接收睡眠、關機、重開機指令。</p></article>
+            <article><Wifi size={18} /><strong>代理程式</strong><p>本機 `remote-shutdown-agent.js` 會每 10 秒回報電腦狀態，並接收記憶體清理、睡眠、關機、重開機指令。</p></article>
             <article><Thermometer size={18} /><strong>溫度提醒</strong><p>80°C 以上顯示偏高，90°C 以上會進入「需要先看」警示。</p></article>
             <article><Moon size={18} /><strong>睡眠喚醒</strong><p>睡眠可設定定時喚醒；關機後無法由同一台電腦自我喚醒。</p></article>
           </div>
@@ -2061,6 +2061,8 @@ function RemotePowerPanel() {
   const memoryPercent = telemetry.totalMemoryBytes
     ? Math.round(((telemetry.totalMemoryBytes - telemetry.freeMemoryBytes) / telemetry.totalMemoryBytes) * 100)
     : null;
+  const freeMemoryText = telemetry.freeMemoryBytes ? formatBytes(telemetry.freeMemoryBytes) : '';
+  const totalMemoryText = telemetry.totalMemoryBytes ? formatBytes(telemetry.totalMemoryBytes) : '';
   const temperatureLevel = temperature.available && temperature.celsius >= 90
     ? 'critical'
     : temperature.available && temperature.celsius >= 80
@@ -2118,6 +2120,7 @@ function RemotePowerPanel() {
   }
 
   const commandButtons = [
+    { action: 'memory-clean', confirm: '清理', label: '清理記憶體', icon: Trash2 },
     { action: 'sleep', confirm: '睡眠', label: '睡眠', icon: Moon },
     { action: 'shutdown', confirm: '關機', label: '關機', icon: Power },
     { action: 'restart', confirm: '重開機', label: '重開機', icon: RotateCcw }
@@ -2154,10 +2157,14 @@ function RemotePowerPanel() {
         </article>
         <article className="deviceMetric">
           <ShieldAlert size={20} />
-          <span>模式</span>
-          <strong>{state?.dryRun ? '測試模式' : '正式執行'}</strong>
-          <small>{memoryPercent !== null ? `記憶體使用約 ${memoryPercent}%` : '等待代理程式回報'}</small>
+          <span>記憶體</span>
+          <strong>{memoryPercent !== null ? `${memoryPercent}%` : '等待中'}</strong>
+          <small>{memoryPercent !== null ? `可用 ${freeMemoryText} / 總計 ${totalMemoryText}` : '等待代理程式回報'}</small>
         </article>
+      </div>
+
+      <div className="remoteNotice">
+        目前模式：{state?.dryRun ? '測試模式，指令只會回報不會執行。' : '正式執行。'} 記憶體清理只清暫存與觸發系統整理，不會關閉程式。
       </div>
 
       {status.status === 'error' && <div className="remoteNotice error">{status.message}</div>}
@@ -2210,6 +2217,13 @@ function formatRelativeTime(date) {
   if (diffSeconds < 60) return `${diffSeconds} 秒前`;
   if (diffSeconds < 3600) return `${Math.round(diffSeconds / 60)} 分鐘前`;
   return new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '--';
+  const gb = bytes / 1024 / 1024 / 1024;
+  if (gb >= 1) return `${Math.round(gb * 10) / 10} GB`;
+  return `${Math.round(bytes / 1024 / 1024)} MB`;
 }
 
 function PwaInstallCard({ pwaInstall }) {

@@ -30,7 +30,8 @@ export async function onRequestPost({ request, env }) {
             id: command.id,
             action: command.action,
             createdAt: command.createdAt,
-            graceSeconds: command.graceSeconds
+            graceSeconds: command.graceSeconds,
+            wakeAfterMinutes: command.wakeAfterMinutes
           }
         : null
     });
