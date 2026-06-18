@@ -871,6 +871,10 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const topBullets = notionData.overviewBullets.slice(0, 8);
   const aiSummaryItem = notionData.aiSummary?.item;
   const aiSummaryHighlights = aiSummaryItem?.highlights?.length ? aiSummaryItem.highlights : splitSummaryHighlights(aiSummaryItem?.summary || '');
+  const liveSummaryHighlights = topBullets.slice(0, 5).map((item) => `${item.sourceLabel}：${item.text}`);
+  const shouldUseLiveSummary = Boolean((notionData.aiSummaryIsStale || notionData.aiSummaryNeedsSource) && liveSummaryHighlights.length);
+  const displayedSummaryTitle = shouldUseLiveSummary ? '即時總覽摘要' : (aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常'));
+  const displayedSummaryHighlights = shouldUseLiveSummary ? liveSummaryHighlights : aiSummaryHighlights;
   const updateAlerts = notionData.updateAlerts || [];
   const [deviceStatus, setDeviceStatus] = useState({ status: 'loading', data: null });
   const deviceState = deviceStatus.data?.state;
@@ -1051,39 +1055,37 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
               </div>
             </div>
           )}
-          {(aiSummaryItem || notionData.aiSummary?.status === 'loading' || notionData.aiSummary?.status === 'error') && (
-            <a
+          {(aiSummaryItem || liveSummaryHighlights.length > 0 || notionData.aiSummary?.status === 'loading' || notionData.aiSummary?.status === 'error') && (
+            <div
               className={`aiSummaryCard ${notionData.aiSummary?.status || ''}`}
-              href={aiSummaryItem?.url || undefined}
-              target={aiSummaryItem?.url ? '_blank' : undefined}
-              rel={aiSummaryItem?.url ? 'noreferrer' : undefined}
-              onClick={(event) => {
-                if (!aiSummaryItem?.url) event.preventDefault();
-              }}
             >
               <div className="aiSummaryHead">
                 <span><Sparkles size={16} /> AI 總覽摘要</span>
                 <small>
-                  {notionData.aiSummaryIsStale
-                    ? '來源有新資料，摘要需更新'
+                  {shouldUseLiveSummary
+                    ? `已套用最新來源 · ${newestItem?.lastEditedTime ? formatKnowledgeTime(newestItem.lastEditedTime) : '剛剛'}`
                     : aiSummaryItem?.lastEditedTime
                       ? `更新 ${formatKnowledgeTime(aiSummaryItem.lastEditedTime)}`
                       : notionData.aiSummary?.message}
                 </small>
               </div>
-              <strong>{aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常')}</strong>
+              <strong>{displayedSummaryTitle}</strong>
               {(notionData.aiSummaryIsStale || notionData.aiSummaryNeedsSource) && (
                 <div className="aiSummaryNotice">
                   <Bell size={15} />
-                  <span>{notionData.aiSummaryIsStale ? 'Notion 來源已更新，但摘要頁尚未被重新整理。' : '已抓到來源資料，尚未讀到摘要頁內容。'}</span>
+                  <span>{shouldUseLiveSummary ? '已先用最新來源資料更新畫面；Notion AI 摘要頁仍可之後再整理。' : '來源已更新，請重新整理來源資料。'}</span>
                 </div>
               )}
-              {aiSummaryHighlights.length > 0 ? (
-                <ul>{aiSummaryHighlights.slice(0, 5).map((text) => <li key={text}>{text}</li>)}</ul>
+              {displayedSummaryHighlights.length > 0 ? (
+                <ul>{displayedSummaryHighlights.slice(0, 5).map((text) => <li key={text}>{text}</li>)}</ul>
               ) : (
                 <p>{notionData.aiSummary?.message || '請在 Notion AI 摘要頁放入今日重點、風險與下一步。'}</p>
               )}
-            </a>
+              <div className="aiSummaryActions">
+                <button type="button" onClick={() => notionData.refreshAll()}><RotateCcw size={15} />用最新資料更新畫面</button>
+                {aiSummaryItem?.url && <a href={aiSummaryItem.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />開啟 Notion 摘要頁</a>}
+              </div>
+            </div>
           )}
           <div className="sourceOverviewGrid">
             {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (

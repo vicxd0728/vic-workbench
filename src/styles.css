@@ -98,6 +98,37 @@
   color: var(--muted);
 }
 
+.aiSummaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.aiSummaryActions button,
+.aiSummaryActions a {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(125, 211, 252, 0.34);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #dbeafe;
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.aiSummaryActions button:hover,
+.aiSummaryActions a:hover {
+  border-color: rgba(125, 211, 252, 0.58);
+  background: rgba(56, 189, 248, 0.18);
+  color: #f8fbff;
+}
+
 .aiSummaryCard.loading,
 .aiSummaryCard.error {
   border-style: dashed;
