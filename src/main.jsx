@@ -865,6 +865,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const queueCount = notes.filter((note) => !note.synced).length;
   const newestSource = [...(notionData.sourceBriefs || [])].sort((a, b) => new Date(b.latest?.lastEditedTime || 0) - new Date(a.latest?.lastEditedTime || 0))[0];
   const topBullets = notionData.overviewBullets.slice(0, 8);
+  const newestItem = notionData.newestItem;
   const aiSummaryItem = notionData.aiSummary?.item;
   const aiSummaryHighlights = aiSummaryItem?.highlights?.length ? aiSummaryItem.highlights : splitSummaryHighlights(aiSummaryItem?.summary || '');
   const liveSummaryHighlights = topBullets.slice(0, 5).map((item) => `${item.sourceLabel}：${item.text}`);
