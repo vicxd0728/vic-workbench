@@ -62,6 +62,7 @@ const navItems = [
   { id: 'projects', label: '專案', icon: FolderKanban },
   { id: 'knowledge', label: '資料來源', icon: BookOpen },
   { id: 'news', label: '新聞', icon: Newspaper },
+  { id: 'links', label: '連結', icon: Link2 },
   { id: 'automation', label: '設置', icon: Zap }
 ];
 
@@ -93,6 +94,78 @@ const initialTasks = [];
 const initialNotes = [];
 
 const initialProjects = [];
+
+const deploymentLinks = [
+  {
+    id: 'vic-workbench',
+    group: '正式服務',
+    label: 'Vic Workbench',
+    url: 'https://vic-workbench.pages.dev/',
+    tag: 'Cloudflare Pages',
+    description: '個人資訊整合看板主站，手機加入主畫面的入口也用這個網址。',
+    primary: true
+  },
+  {
+    id: 'lematec-erp',
+    group: '正式服務',
+    label: 'LEMATEC ERP',
+    url: 'https://lematec-erp.pages.dev/',
+    tag: 'Cloudflare Pages',
+    description: 'LEMATEC ERP 系統，未來會把看板統計同步到 Vic Workbench。',
+    primary: true
+  },
+  {
+    id: 'erp-board-json',
+    group: 'API / Worker',
+    label: 'ERP 看板 JSON',
+    url: 'https://green-wave-c22f.vic-e93.workers.dev/api/board.json',
+    tag: 'JSON API',
+    description: '提供今日出貨、待出貨、庫存警示、逾期等 ERP 看板統計。',
+    primary: true
+  },
+  {
+    id: 'green-wave-worker',
+    group: 'API / Worker',
+    label: 'green-wave-c22f Worker',
+    url: 'https://green-wave-c22f.vic-e93.workers.dev',
+    tag: 'Cloudflare Worker',
+    description: 'ERP 與 Notion 資料代理 Worker，部分跨系統資料會從這裡輸出。'
+  },
+  {
+    id: 'github-workbench',
+    group: '管理後台',
+    label: 'GitHub - vic-workbench',
+    url: 'https://github.com/vicxd0728/vic-workbench',
+    tag: 'GitHub',
+    description: 'Vic Workbench 原始碼倉庫；推送 main 後會觸發 Cloudflare 部署。'
+  },
+  {
+    id: 'cloudflare-dashboard',
+    group: '管理後台',
+    label: 'Cloudflare Dashboard',
+    url: 'https://dash.cloudflare.com/',
+    tag: 'Cloudflare',
+    description: 'Pages、Workers、Secrets 與部署紀錄的管理入口。'
+  },
+  {
+    id: 'notion-ai-summary',
+    group: 'Notion',
+    label: 'Vic Workbench AI 摘要頁',
+    url: 'https://app.notion.com/p/Vic-Workbench-AI-37bff6f424bb81c0a78ccbcdc823e9d2',
+    tag: 'Notion',
+    description: '專門放總覽摘要、重點整理與下一步提醒的 Notion 頁。'
+  },
+  {
+    id: 'notion-client-report',
+    group: 'Notion',
+    label: '客戶分析週報父頁',
+    url: 'https://app.notion.com/p/356ff6f424bb81d4a9a8c4a997fcffc6',
+    tag: 'Notion Page',
+    description: '目前作為資料來源的父頁資料夾，系統會讀取底下子頁。'
+  }
+];
+
+const deploymentLinkGroups = ['全部', ...Array.from(new Set(deploymentLinks.map((item) => item.group)))];
 
 const notionDatabases = [
   { id: 'tasks', label: '任務資料庫', icon: CheckSquare, count: 0, status: '尚未連接', purpose: '任務同步、待辦與工作狀態' },
@@ -690,7 +763,22 @@ function ActiveView(props) {
         </div>
         <aside className="insightRail">
           <FocusPanel stats={stats} />
-          <AutomationPanel resetDemoData={resetDemoData} />
+          <AutomationPanel setActiveView={setActiveView} />
+        </aside>
+      </section>
+    );
+  }
+
+  if (activeView === 'links') {
+    return (
+      <section className="contentGrid singlePage">
+        <div className="primaryColumn">
+          <PageHeader title="快速連結" subtitle="集中管理已部署到 Cloudflare、GitHub 與 Notion 的重要入口。" />
+          <LinksWorkspace />
+        </div>
+        <aside className="insightRail">
+          <AutomationPanel setActiveView={setActiveView} />
+          <FocusPanel stats={stats} />
         </aside>
       </section>
     );
@@ -705,7 +793,7 @@ function ActiveView(props) {
           <SettingsWorkspace notionConfig={notionConfig} setNotionConfig={setNotionConfig} resetDemoData={resetDemoData} />
         </div>
         <aside className="insightRail">
-          <AutomationPanel resetDemoData={resetDemoData} />
+          <AutomationPanel setActiveView={setActiveView} />
           <NotionPanel notes={notes} syncNote={syncNote} />
         </aside>
       </section>
@@ -756,7 +844,7 @@ function Sidebar({ activeView, setActiveView, notes, tasks }) {
       <div className="sidebarPanel">
         <p>目前架構</p>
         <strong>首頁收斂，細節進分頁</strong>
-        <span>Notion、新聞、設定都已拆開，之後接 API 會更清楚。</span>
+        <span>Notion、新聞、連結、設定都已拆開，之後新增服務會更好管理。</span>
       </div>
       <div className="utilityGroup">
         <button className={`navItem utility ${activeView === 'automation' ? 'selected' : ''}`} onClick={() => setActiveView('automation')}>
@@ -2390,18 +2478,82 @@ function KnowledgePanel({ notes, expanded = false }) {
   );
 }
 
-function AutomationPanel({ resetDemoData }) {
-  const links = [
-    ['Notion', 'https://www.notion.so'],
-    ['Google Drive', 'https://drive.google.com'],
-    ['Gmail', 'https://mail.google.com'],
-    ['Calendar', 'https://calendar.google.com']
-  ];
+function LinksWorkspace() {
+  const [query, setQuery] = useState('');
+  const [group, setGroup] = useState('全部');
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleLinks = deploymentLinks.filter((item) => {
+    const matchesGroup = group === '全部' || item.group === group;
+    const haystack = `${item.label} ${item.group} ${item.tag} ${item.description} ${item.url}`.toLowerCase();
+    return matchesGroup && (!normalizedQuery || haystack.includes(normalizedQuery));
+  });
+  const primaryLinks = deploymentLinks.filter((item) => item.primary);
+
+  return (
+    <section className="panel linkHubPanel">
+      <div className="linkHubHero">
+        <div>
+          <span>Cloudflare / GitHub / Notion</span>
+          <h2>已部署入口總覽</h2>
+          <p>之後我幫你架的新頁面、Worker、API 或管理入口，都可以集中放在這裡，不用再翻聊天紀錄找網址。</p>
+        </div>
+        <div className="linkHubStats">
+          <strong>{deploymentLinks.length}</strong>
+          <span>個入口</span>
+        </div>
+      </div>
+
+      <div className="linkHubToolbar">
+        <div className="linkSearchBox">
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜尋 Cloudflare、ERP、Notion..." />
+        </div>
+        <div className="linkGroupTabs" role="tablist" aria-label="連結分類">
+          {deploymentLinkGroups.map((item) => (
+            <button type="button" className={group === item ? 'activeLinkGroup' : ''} key={item} onClick={() => setGroup(item)}>
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="featuredLinkGrid">
+        {primaryLinks.map((item) => (
+          <a className="featuredLinkCard" href={item.url} target="_blank" rel="noreferrer" key={item.id}>
+            <span>{item.tag}</span>
+            <strong>{item.label}</strong>
+            <p>{item.description}</p>
+            <em>開啟 <ExternalLink size={14} /></em>
+          </a>
+        ))}
+      </div>
+
+      <div className="linkList">
+        {visibleLinks.map((item) => (
+          <a className="linkListRow" href={item.url} target="_blank" rel="noreferrer" key={item.id}>
+            <span>{item.group}</span>
+            <div>
+              <strong>{item.label}</strong>
+              <p>{item.description}</p>
+              <small>{item.url}</small>
+            </div>
+            <em>{item.tag}</em>
+            <ExternalLink size={16} />
+          </a>
+        ))}
+        {visibleLinks.length === 0 && <div className="emptyState">找不到符合條件的連結。</div>}
+      </div>
+    </section>
+  );
+}
+
+function AutomationPanel({ setActiveView }) {
+  const links = deploymentLinks.filter((item) => item.primary).slice(0, 4);
   return (
     <section className="panel resourcesPanel">
-      <div className="railTitle"><h2>常用入口</h2><button onClick={resetDemoData}><RotateCcw size={15} />清空</button></div>
+      <div className="railTitle"><h2>快速連結</h2><button onClick={() => setActiveView?.('links')}>管理 <ChevronRight size={15} /></button></div>
       <div className="resourceGrid">
-        {links.map(([label, url]) => <a href={url} target="_blank" rel="noreferrer" key={label}><span>{label.slice(0, 1)}</span><strong>{label}</strong></a>)}
+        {links.map((item) => <a href={item.url} target="_blank" rel="noreferrer" key={item.id}><span>{item.label.slice(0, 1)}</span><strong>{item.label}</strong><small>{item.tag}</small></a>)}
       </div>
     </section>
   );
