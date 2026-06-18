@@ -766,16 +766,12 @@ function ActiveView(props) {
 
   if (activeView === 'automation') {
     return (
-      <section className="contentGrid singlePage">
+      <section className="contentGrid singlePage commandPage">
         <div className="primaryColumn">
           <PageHeader title="系統設定" subtitle="資料來源、AI 彙整、遠端電腦、安全性與部署狀態分層管理。" />
           <RemotePowerPanel />
           <SettingsWorkspace notionConfig={notionConfig} setNotionConfig={setNotionConfig} resetDemoData={resetDemoData} />
         </div>
-        <aside className="insightRail">
-          <AutomationPanel setActiveView={setActiveView} />
-          <NotionPanel notes={notes} syncNote={syncNote} />
-        </aside>
       </section>
     );
   }

@@ -2701,14 +2701,16 @@ a {
 
 .settingsLayerGrid {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: start;
 }
 
 .settingsLayerAside {
   display: grid;
+  grid-template-columns: minmax(180px, 1fr) repeat(2, minmax(150px, 190px));
   align-content: start;
+  align-items: center;
   gap: 10px;
   min-width: 0;
   padding: 14px;
@@ -2778,7 +2780,7 @@ a {
 
 .sourceManager {
   display: grid;
-  grid-template-columns: 270px minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 320px) minmax(380px, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -2865,6 +2867,7 @@ a {
 .sourceEditorHeader {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -2886,10 +2889,11 @@ a {
 
 .sourceEditorHeader .primaryAction {
   margin-left: auto;
+  white-space: nowrap;
 }
 
 .databaseSettings.singleSource {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
 }
 
 .resultGrid {
@@ -4241,6 +4245,19 @@ body {
 
   .linkGroupTabs {
     justify-content: flex-start;
+  }
+
+  .sourceManager {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sourceList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sourceList .databaseHeaderActions,
+  .sourceList .erpSourceItem {
+    grid-column: 1 / -1;
   }
 }
 
