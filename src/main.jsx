@@ -131,6 +131,15 @@ const deploymentLinks = [
     tag: 'AISEO',
     description: 'AISEO / GEO 內容與搜尋可見度檢測工具。',
     primary: true
+  },
+  {
+    id: 'lematec-product-radar',
+    group: '情報',
+    label: 'LEMATEC 產品情報雷達',
+    url: 'https://lematec-health-check-webhook.vic-e93.workers.dev/',
+    tag: 'Product Radar',
+    description: 'LEMATEC 產品健康檢查、情報雷達與提醒入口。',
+    primary: true
   }
 ];
 
@@ -2462,7 +2471,7 @@ function LinksWorkspace() {
     <section className="panel linkHubPanel">
       <div className="linkHubHero">
         <div>
-          <span>Cloudflare / GitHub / Notion</span>
+          <span>Cloudflare Pages / Workers</span>
           <h2>已部署入口總覽</h2>
           <p>之後我幫你架的新頁面、Worker、API 或管理入口，都可以集中放在這裡，不用再翻聊天紀錄找網址。</p>
         </div>
@@ -2517,7 +2526,7 @@ function LinksWorkspace() {
 }
 
 function AutomationPanel({ setActiveView }) {
-  const links = deploymentLinks.filter((item) => item.primary).slice(0, 4);
+  const links = deploymentLinks.filter((item) => item.primary).slice(0, 6);
   return (
     <section className="panel resourcesPanel">
       <div className="railTitle"><h2>快速連結</h2><button onClick={() => setActiveView?.('links')}>管理 <ChevronRight size={15} /></button></div>
