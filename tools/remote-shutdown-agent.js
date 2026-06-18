@@ -183,15 +183,16 @@ async function runCommand(command) {
 
     if (action === 'sleep') {
       const wakeAfterMinutes = Math.min(480, Math.max(0, Number(command.wakeAfterMinutes || 0)));
+      let wakeMessage = '';
       if (wakeAfterMinutes > 0) {
-        await scheduleWakeTimer(wakeAfterMinutes);
+        wakeMessage = await scheduleWakeTimer(wakeAfterMinutes);
       }
       await exec('powershell.exe', [
         '-NoProfile',
         '-Command',
         'Add-Type -Name Win32Power -Namespace Native -MemberDefinition \'[DllImport("powrprof.dll", SetLastError=true)] public static extern bool SetSuspendState(bool hibernate, bool forceCritical, bool disableWakeEvent);\'; [Native.Win32Power]::SetSuspendState($false, $false, $false)'
       ]);
-      await acknowledge(command, 'executed', wakeAfterMinutes > 0 ? `Sleep requested. Wake timer set for ${wakeAfterMinutes} minutes.` : 'Sleep requested.');
+      await acknowledge(command, 'executed', wakeAfterMinutes > 0 ? `Sleep requested. ${wakeMessage}` : 'Sleep requested.');
       return;
     }
 
@@ -228,14 +229,27 @@ async function cleanMemory() {
 
 async function scheduleWakeTimer(minutes) {
   const script = [
+    `$ErrorActionPreference = 'Stop'`,
+    `$logDir = Join-Path $env:LOCALAPPDATA 'VicWorkbench'`,
+    `New-Item -ItemType Directory -Path $logDir -Force | Out-Null`,
+    `$marker = Join-Path $logDir 'wake-marker.txt'`,
+    `powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1 | Out-Null`,
+    `powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1 | Out-Null`,
+    `powercfg /setactive SCHEME_CURRENT | Out-Null`,
+    `Unregister-ScheduledTask -TaskName 'VicWorkbenchWake' -Confirm:$false -ErrorAction SilentlyContinue`,
     `$runAt = (Get-Date).AddMinutes(${minutes})`,
-    `$action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c exit'`,
+    `$wakeScript = "Add-Content -LiteralPath '$marker' -Value (Get-Date).ToString('o'); Start-Sleep -Seconds 20"`,
+    `$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ('-NoProfile -WindowStyle Hidden -Command "' + $wakeScript + '"')`,
     `$trigger = New-ScheduledTaskTrigger -Once -At $runAt`,
-    `$settings = New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries`,
-    `Register-ScheduledTask -TaskName 'VicWorkbenchWake' -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null`
+    `$settings = New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable`,
+    `Register-ScheduledTask -TaskName 'VicWorkbenchWake' -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null`,
+    `$task = Get-ScheduledTask -TaskName 'VicWorkbenchWake'`,
+    `$wakeToRun = $task.Settings.WakeToRun`,
+    `Write-Output ("Wake timer set for " + $runAt.ToString('yyyy-MM-dd HH:mm:ss') + ". WakeToRun=" + $wakeToRun + ".")`
   ].join('; ');
 
-  await exec('powershell.exe', ['-NoProfile', '-Command', script]);
+  const output = await exec('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script]);
+  return String(output).trim() || `Wake timer set for ${minutes} minutes.`;
 }
 
 async function acknowledge(command, status, message) {
