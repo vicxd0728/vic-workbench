@@ -40,18 +40,37 @@ function summarizeText(text) {
   return sentences.slice(0, 3).join('。') + (sentences.length ? '。' : '');
 }
 
+function isLowValueLine(text = '') {
+  const normalized = text.trim();
+  if (!normalized) return true;
+  if (/^(SEO監控周報|客戶週報|CRM追蹤匯報|社媒貼文|市場情報庫|本週批次|完整讀取筆數|UTM URL|來源)[:：]/i.test(normalized)) return true;
+  if (/^https?:\/\//i.test(normalized)) return true;
+  return normalized.length < 8;
+}
+
+function scoreHighlight(text = '') {
+  const keywords = [
+    '未到帳', '逾期', '風險', '異常', '卡住', '延遲', '下降', '下滑', '不足', '缺料',
+    '待處理', '待審', '待檢', '待出貨', '待領料', '生產中', '交期', '庫存警示',
+    '需提供', '需要', '建議', '下一步', '優先', '影響', '客戶', '詢盤', 'SEO', '流量',
+    '排名', '轉換', '點擊', '曝光', '市場', '趨勢'
+  ];
+  return keywords.reduce((score, keyword) => score + (text.includes(keyword) ? 1 : 0), 0);
+}
+
 function buildHighlights(text) {
   const cleanedLines = text
     .split(/\n+/)
     .map((item) => item.replace(/^[-•\d.\s]+/, '').trim())
-    .filter((item) => item.length >= 8);
+    .filter((item) => !isLowValueLine(item));
   const sentenceHighlights = text
     .replace(/\s+/g, ' ')
     .split(/[。！？!?；;]/)
     .map((item) => item.trim())
-    .filter((item) => item.length >= 8);
+    .filter((item) => !isLowValueLine(item));
 
   return [...new Set([...cleanedLines, ...sentenceHighlights])]
+    .sort((a, b) => scoreHighlight(b) - scoreHighlight(a))
     .map((item) => item.length > 90 ? `${item.slice(0, 88)}...` : item)
     .slice(0, 3);
 }

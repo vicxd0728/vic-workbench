@@ -868,7 +868,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const newestItem = notionData.newestItem;
   const aiSummaryItem = notionData.aiSummary?.item;
   const aiSummaryHighlights = aiSummaryItem?.highlights?.length ? aiSummaryItem.highlights : splitSummaryHighlights(aiSummaryItem?.summary || '');
-  const liveSummaryHighlights = topBullets.slice(0, 5).map((item) => `${item.sourceLabel}：${item.text}`);
+  const liveSummaryHighlights = buildActionableSummary(notionData.allLiveItems, 5);
   const shouldUseLiveSummary = Boolean((notionData.aiSummaryIsStale || notionData.aiSummaryNeedsSource) && liveSummaryHighlights.length);
   const displayedSummaryTitle = shouldUseLiveSummary ? '即時總覽摘要' : (aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常'));
   const displayedSummaryHighlights = shouldUseLiveSummary ? liveSummaryHighlights : aiSummaryHighlights;
@@ -1342,6 +1342,58 @@ function splitSummaryHighlights(text = '') {
     .map((item) => item.trim())
     .filter((item) => item.length >= 10)
     .slice(0, 3);
+}
+
+function isLowValueSummaryLine(text = '') {
+  const normalized = text.trim();
+  if (!normalized) return true;
+  if (/^(SEO監控周報|客戶週報|CRM追蹤匯報|社媒貼文|市場情報庫|本週批次|完整讀取筆數|UTM URL|來源)[:：]/i.test(normalized)) return true;
+  if (/^https?:\/\//i.test(normalized)) return true;
+  if (normalized.length < 12) return true;
+  return false;
+}
+
+function scoreSummaryLine(text = '') {
+  const keywords = [
+    '未到帳', '逾期', '風險', '異常', '卡住', '延遲', '下降', '下滑', '不足', '缺料',
+    '待處理', '待審', '待檢', '待出貨', '待領料', '生產中', '交期', '庫存警示',
+    '需提供', '需要', '建議', '下一步', '優先', '影響', '客戶', '詢盤', 'SEO', '流量',
+    '排名', '轉換', '點擊', '曝光', '週報', '市場', '趨勢'
+  ];
+  return keywords.reduce((score, keyword) => score + (text.includes(keyword) ? 1 : 0), 0);
+}
+
+function buildActionableSummary(items = [], limit = 5) {
+  const candidates = items.flatMap((item) => {
+    const lines = [
+      ...(item.highlights || []),
+      ...splitSummaryHighlights(item.summary || ''),
+      item.summary || ''
+    ];
+
+    return lines
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter((line) => !isLowValueSummaryLine(line))
+      .map((line) => ({
+        id: `${item.id || item.title}-${line}`,
+        sourceLabel: item.sourceLabel,
+        text: line.length > 96 ? `${line.slice(0, 94)}...` : line,
+        time: item.lastEditedTime,
+        score: scoreSummaryLine(line)
+      }));
+  });
+
+  const seen = new Set();
+  return candidates
+    .filter((item) => {
+      const key = `${item.sourceLabel}-${item.text}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => (b.score - a.score) || (new Date(b.time || 0) - new Date(a.time || 0)))
+    .slice(0, limit)
+    .map((item) => `${item.sourceLabel}：${item.text}`);
 }
 
 function buildKnowledgeBullets(items = [], limit = 8) {
