@@ -929,6 +929,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       ? { level: 'warning', label: 'Notion 來源異常', value: `${notionData.sourceBriefs.filter((source) => source.status === 'error').length} 個`, detail: '到知識庫分頁檢查來源連結或權限。' }
       : null
   ].filter(Boolean);
+  const priorityMessage = attentionItems.length
+    ? attentionItems.map((item) => `${item.label} ${item.value}`).join('、')
+    : '目前狀態穩定';
   const readySources = notionData.sourceBriefs.filter((source) => source.status === 'ready' && source.latest);
   const sourceErrorCount = notionData.sourceBriefs.filter((source) => source.status === 'error').length;
   const executiveCards = [
@@ -1012,7 +1015,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       <section className="priorityBoard">
         <div className="priorityBoardTitle">
           <span>今日優先</span>
-          <strong>{attentionItems.length ? `${attentionItems.length} 個訊號需要看` : '目前狀態穩定'}</strong>
+          <strong>{priorityMessage}</strong>
         </div>
         <div className="priorityCards">
           {executiveCards.map((item) => (
