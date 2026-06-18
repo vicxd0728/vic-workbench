@@ -2119,8 +2119,11 @@ function RemotePowerPanel() {
     }
   }
 
+  async function cleanMemoryNow() {
+    await sendCommand('memory-clean', '清理');
+  }
+
   const commandButtons = [
-    { action: 'memory-clean', confirm: '清理', label: '清理記憶體', icon: Trash2 },
     { action: 'sleep', confirm: '睡眠', label: '睡眠', icon: Moon },
     { action: 'shutdown', confirm: '關機', label: '關機', icon: Power },
     { action: 'restart', confirm: '重開機', label: '重開機', icon: RotateCcw }
@@ -2167,6 +2170,17 @@ function RemotePowerPanel() {
         目前模式：{state?.dryRun ? '測試模式，指令只會回報不會執行。' : '正式執行。'} 記憶體清理只清暫存與觸發系統整理，不會關閉程式。
       </div>
 
+      <button
+        type="button"
+        className="memoryCleanButton"
+        onClick={cleanMemoryNow}
+        disabled={!secret || commandState.status === 'loading'}
+      >
+        <Trash2 size={18} />
+        <span>立即清理記憶體</span>
+        <small>{memoryPercent !== null ? `目前使用 ${memoryPercent}%` : '等待狀態回報'}</small>
+      </button>
+
       {status.status === 'error' && <div className="remoteNotice error">{status.message}</div>}
       {temperatureLevel !== 'normal' && temperature.available && (
         <div className={`remoteNotice ${temperatureLevel}`}>
@@ -2181,7 +2195,7 @@ function RemotePowerPanel() {
         <label><span>控制密鑰</span><input type="password" value={secret} onChange={(event) => updateSecret(event.target.value)} placeholder="貼上 .remote-control.env 裡的密鑰" /></label>
         <label><span>倒數秒數</span><input type="number" min="10" max="300" value={graceSeconds} onChange={(event) => setGraceSeconds(event.target.value)} /></label>
         <label><span>睡眠後喚醒</span><select value={String(wakeAfterMinutes)} onChange={(event) => setWakeAfterMinutes(Number(event.target.value))}><option value="0">不自動喚醒</option><option value="15">15 分鐘</option><option value="30">30 分鐘</option><option value="60">60 分鐘</option><option value="120">2 小時</option></select></label>
-        <label><span>確認字</span><input value={confirmText} onChange={(event) => setConfirmText(event.target.value.trim())} placeholder="例如 關機" /></label>
+        <label><span>確認字</span><input value={confirmText} onChange={(event) => setConfirmText(event.target.value.trim())} placeholder="睡眠 / 關機 / 重開機 / 取消" /></label>
       </div>
 
       <div className="remoteActions">

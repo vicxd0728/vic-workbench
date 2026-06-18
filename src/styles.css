@@ -3420,6 +3420,50 @@ a {
   color: var(--green);
 }
 
+.memoryCleanButton {
+  width: 100%;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid rgba(20, 184, 166, 0.32);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(56, 189, 248, 0.08)), var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.memoryCleanButton svg {
+  grid-row: 1 / span 2;
+  color: var(--green);
+}
+
+.memoryCleanButton span {
+  font-weight: 900;
+}
+
+.memoryCleanButton small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.memoryCleanButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(20, 184, 166, 0.58);
+  box-shadow: var(--shadow-soft);
+}
+
+.memoryCleanButton:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 .remoteCommandBox {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) 150px minmax(180px, 0.8fr);
