@@ -67,6 +67,20 @@
   font-size: 1.1rem;
 }
 
+.aiSummaryNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border: 1px solid rgba(245, 158, 11, 0.26);
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  color: #fde68a;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
 .aiSummaryCard ul {
   display: grid;
   gap: 8px;

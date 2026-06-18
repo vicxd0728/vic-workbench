@@ -81,6 +81,8 @@ const stageLabels = {
 
 const stageOrder = ['today', 'next', 'waiting'];
 
+const NOTION_AUTO_REFRESH_MS = 5 * 60 * 1000;
+
 const typeLabels = {
   task: '任務',
   note: '筆記',
@@ -1061,9 +1063,21 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
             >
               <div className="aiSummaryHead">
                 <span><Sparkles size={16} /> AI 總覽摘要</span>
-                <small>{aiSummaryItem?.lastEditedTime ? `更新 ${formatKnowledgeTime(aiSummaryItem.lastEditedTime)}` : notionData.aiSummary?.message}</small>
+                <small>
+                  {notionData.aiSummaryIsStale
+                    ? '來源有新資料，摘要需更新'
+                    : aiSummaryItem?.lastEditedTime
+                      ? `更新 ${formatKnowledgeTime(aiSummaryItem.lastEditedTime)}`
+                      : notionData.aiSummary?.message}
+                </small>
               </div>
               <strong>{aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常')}</strong>
+              {(notionData.aiSummaryIsStale || notionData.aiSummaryNeedsSource) && (
+                <div className="aiSummaryNotice">
+                  <Bell size={15} />
+                  <span>{notionData.aiSummaryIsStale ? 'Notion 來源已更新，但摘要頁尚未被重新整理。' : '已抓到來源資料，尚未讀到摘要頁內容。'}</span>
+                </div>
+              )}
               {aiSummaryHighlights.length > 0 ? (
                 <ul>{aiSummaryHighlights.slice(0, 5).map((text) => <li key={text}>{text}</li>)}</ul>
               ) : (
@@ -1485,6 +1499,20 @@ function useNotionSources(notionConfig, setNotionConfig) {
     readAiSummaryPage();
   }, [notionConfig.aiSummaryPageUrl]);
 
+  useEffect(() => {
+    if (!connectedSources.length && !notionConfig.aiSummaryPageUrl) return undefined;
+
+    const timer = window.setInterval(() => {
+      connectedSources.forEach((source) => readNotionSource(source));
+      readAiSummaryPage();
+    }, NOTION_AUTO_REFRESH_MS);
+
+    return () => window.clearInterval(timer);
+  }, [
+    notionConfig.aiSummaryPageUrl,
+    connectedSources.map((source) => `${source.id}:${source.databaseId || source.pageUrl}:${source.analysisLimit}:${source.sortMode}`).join('|')
+  ]);
+
   const allLiveItems = connectedSources.flatMap((source) => (liveSummaries[source.id] || []).map((item) => ({ ...item, sourceLabel: source.label, sourceId: source.id })));
   const newestItem = [...allLiveItems].sort((a, b) => new Date(b.lastEditedTime || 0) - new Date(a.lastEditedTime || 0))[0];
   const overviewBullets = buildKnowledgeBullets(allLiveItems, 8);
@@ -1506,6 +1534,13 @@ function useNotionSources(notionConfig, setNotionConfig) {
   const updateAlerts = sourceBriefs
     .filter((source) => source.status === 'ready' && source.latest && source.hasUpdate)
     .sort((a, b) => new Date(b.latest.lastEditedTime || 0) - new Date(a.latest.lastEditedTime || 0));
+  const aiSummaryUpdatedAt = aiSummary.item?.lastEditedTime || '';
+  const aiSummaryIsStale = Boolean(
+    newestItem?.lastEditedTime &&
+    aiSummaryUpdatedAt &&
+    new Date(newestItem.lastEditedTime) > new Date(aiSummaryUpdatedAt)
+  );
+  const aiSummaryNeedsSource = Boolean(newestItem?.lastEditedTime && !aiSummaryUpdatedAt && notionConfig.aiSummaryPageUrl);
 
   function markSourceSeen(sourceId) {
     const source = sourceBriefs.find((item) => item.id === sourceId);
@@ -1547,12 +1582,14 @@ function useNotionSources(notionConfig, setNotionConfig) {
     sourceBriefs,
     updateAlerts,
     aiSummary,
+    aiSummaryIsStale,
+    aiSummaryNeedsSource,
     readNotionSource,
     markSourceSeen,
     markAllSourcesSeen,
     refreshAll: () => {
-      readAiSummaryPage();
       connectedSources.forEach((source) => readNotionSource(source));
+      readAiSummaryPage();
     }
   };
 }
