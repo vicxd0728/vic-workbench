@@ -97,15 +97,6 @@ const initialProjects = [];
 
 const deploymentLinks = [
   {
-    id: 'vic-workbench',
-    group: '正式服務',
-    label: 'Vic Workbench',
-    url: 'https://vic-workbench.pages.dev/',
-    tag: 'Cloudflare Pages',
-    description: '個人資訊整合看板主站，手機加入主畫面的入口也用這個網址。',
-    primary: true
-  },
-  {
     id: 'lematec-erp',
     group: '正式服務',
     label: 'LEMATEC ERP',
@@ -115,53 +106,31 @@ const deploymentLinks = [
     primary: true
   },
   {
-    id: 'erp-board-json',
-    group: 'API / Worker',
-    label: 'ERP 看板 JSON',
-    url: 'https://green-wave-c22f.vic-e93.workers.dev/api/board.json',
-    tag: 'JSON API',
-    description: '提供今日出貨、待出貨、庫存警示、逾期等 ERP 看板統計。',
+    id: 'step-web-viewer',
+    group: '工具',
+    label: 'STP Studio',
+    url: 'https://step-web-viewer.pages.dev/',
+    tag: '3D Viewer',
+    description: 'STP / STEP 3D 檔案查看工具。',
     primary: true
   },
   {
-    id: 'green-wave-worker',
-    group: 'API / Worker',
-    label: 'green-wave-c22f Worker',
-    url: 'https://green-wave-c22f.vic-e93.workers.dev',
-    tag: 'Cloudflare Worker',
-    description: 'ERP 與 Notion 資料代理 Worker，部分跨系統資料會從這裡輸出。'
+    id: 'conversation-logger',
+    group: '紀錄',
+    label: 'Conversation Logger',
+    url: 'https://conversation-logger.pages.dev/',
+    tag: 'Logger',
+    description: '對話、WhatsApp 或 Email 紀錄整理工具。',
+    primary: true
   },
   {
-    id: 'github-workbench',
-    group: '管理後台',
-    label: 'GitHub - vic-workbench',
-    url: 'https://github.com/vicxd0728/vic-workbench',
-    tag: 'GitHub',
-    description: 'Vic Workbench 原始碼倉庫；推送 main 後會觸發 Cloudflare 部署。'
-  },
-  {
-    id: 'cloudflare-dashboard',
-    group: '管理後台',
-    label: 'Cloudflare Dashboard',
-    url: 'https://dash.cloudflare.com/',
-    tag: 'Cloudflare',
-    description: 'Pages、Workers、Secrets 與部署紀錄的管理入口。'
-  },
-  {
-    id: 'notion-ai-summary',
-    group: 'Notion',
-    label: 'Vic Workbench AI 摘要頁',
-    url: 'https://app.notion.com/p/Vic-Workbench-AI-37bff6f424bb81c0a78ccbcdc823e9d2',
-    tag: 'Notion',
-    description: '專門放總覽摘要、重點整理與下一步提醒的 Notion 頁。'
-  },
-  {
-    id: 'notion-client-report',
-    group: 'Notion',
-    label: '客戶分析週報父頁',
-    url: 'https://app.notion.com/p/356ff6f424bb81d4a9a8c4a997fcffc6',
-    tag: 'Notion Page',
-    description: '目前作為資料來源的父頁資料夾，系統會讀取底下子頁。'
+    id: 'aiseo-geo-auditor',
+    group: 'SEO / GEO',
+    label: 'AISEO GEO Auditor',
+    url: 'https://aiseo-geo-auditor.pages.dev/',
+    tag: 'AISEO',
+    description: 'AISEO / GEO 內容與搜尋可見度檢測工具。',
+    primary: true
   }
 ];
 
