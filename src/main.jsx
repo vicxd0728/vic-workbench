@@ -216,7 +216,7 @@ const notionDatabaseDetails = {
 };
 
 const workbenchNotionDefaults = {
-  hubUrl: 'https://app.notion.com/p/Vic-Workbench-Data-Center-387ff6f424bb81a890eddcee1a6abd2e',
+  hubUrl: 'https://app.notion.com/p/387ff6f424bb81a890eddcee1a6abd2e',
   captureId: '387ff6f424bb8196a0d7db4b72427a0b',
   captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
   meetingId: '387ff6f424bb8192ac4ef6b7e8791a1a',
