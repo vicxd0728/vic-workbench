@@ -217,6 +217,7 @@ const notionDatabaseDetails = {
 
 const workbenchNotionDefaults = {
   hubUrl: 'https://app.notion.com/p/Workbench-387ff6f424bb8159962be9c34c2ad6ca',
+  databasePageUrl: 'https://app.notion.com/p/387ff6f424bb81cd9f98f805ba27462e',
   captureId: '387ff6f424bb8196a0d7db4b72427a0b',
   captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
   meetingId: '387ff6f424bb8192ac4ef6b7e8791a1a',
@@ -426,6 +427,7 @@ function sanitizeSyncedNotionConfig(config = {}) {
     defaultDatabase: migratedConfig.defaultDatabase || '',
     aiSummaryPageUrl: migratedConfig.aiSummaryPageUrl || '',
     workbenchHubPageUrl: migratedConfig.workbenchHubPageUrl || workbenchNotionDefaults.hubUrl,
+    workbenchDatabasePageUrl: migratedConfig.workbenchDatabasePageUrl || workbenchNotionDefaults.databasePageUrl,
     captureDatabaseId: migratedConfig.captureDatabaseId || workbenchNotionDefaults.captureId,
     captureDatabaseUrl: migratedConfig.captureDatabaseUrl || workbenchNotionDefaults.captureUrl,
     meetingDatabaseId: migratedConfig.meetingDatabaseId || workbenchNotionDefaults.meetingId,
@@ -460,6 +462,7 @@ function mergeSyncedNotionConfig(remoteConfig = {}, localConfig = {}) {
     defaultDatabase: local.defaultDatabase || remote.defaultDatabase,
     aiSummaryPageUrl: local.aiSummaryPageUrl || remote.aiSummaryPageUrl,
     workbenchHubPageUrl: local.workbenchHubPageUrl || remote.workbenchHubPageUrl,
+    workbenchDatabasePageUrl: local.workbenchDatabasePageUrl || remote.workbenchDatabasePageUrl,
     captureDatabaseId: local.captureDatabaseId || remote.captureDatabaseId,
     captureDatabaseUrl: local.captureDatabaseUrl || remote.captureDatabaseUrl,
     meetingDatabaseId: local.meetingDatabaseId || remote.meetingDatabaseId,
@@ -530,6 +533,7 @@ function App() {
     defaultDatabase: '',
     aiSummaryPageUrl: '',
     workbenchHubPageUrl: workbenchNotionDefaults.hubUrl,
+    workbenchDatabasePageUrl: workbenchNotionDefaults.databasePageUrl,
     captureDatabaseId: workbenchNotionDefaults.captureId,
     captureDatabaseUrl: workbenchNotionDefaults.captureUrl,
     meetingDatabaseId: workbenchNotionDefaults.meetingId,
@@ -2486,12 +2490,14 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, appearance, setAppea
           </div>
           <div className="notionSetup focused">
             <label><span>Workbench 資料中心</span><input value={notionConfig.workbenchHubPageUrl || ''} onChange={(event) => updateConfig('workbenchHubPageUrl', event.target.value)} placeholder="Notion 資料中心連結" /></label>
+            <label><span>資料庫管理頁</span><input value={notionConfig.workbenchDatabasePageUrl || ''} onChange={(event) => updateConfig('workbenchDatabasePageUrl', event.target.value)} placeholder="Workbench 底下的資料庫管理頁" /></label>
             <label><span>快速紀錄資料庫</span><input value={notionConfig.captureDatabaseUrl || ''} onChange={(event) => updateConfig('captureDatabaseUrl', event.target.value)} placeholder="快速紀錄 / 知識收件匣連結" /></label>
             <label><span>會議筆記資料庫</span><input value={notionConfig.meetingDatabaseUrl || ''} onChange={(event) => updateConfig('meetingDatabaseUrl', event.target.value)} placeholder="會議筆記資料庫連結" /></label>
             <label><span>快速紀錄 Database ID</span><input value={notionConfig.captureDatabaseId || ''} onChange={(event) => updateConfig('captureDatabaseId', event.target.value)} placeholder="Notion database id" /></label>
             <label><span>會議筆記 Database ID</span><input value={notionConfig.meetingDatabaseId || ''} onChange={(event) => updateConfig('meetingDatabaseId', event.target.value)} placeholder="Notion database id" /></label>
             <div className="notionLinkActions">
               {notionConfig.workbenchHubPageUrl && <a href={notionConfig.workbenchHubPageUrl} target="_blank" rel="noreferrer">開啟資料中心</a>}
+              {notionConfig.workbenchDatabasePageUrl && <a href={notionConfig.workbenchDatabasePageUrl} target="_blank" rel="noreferrer">開啟資料庫管理</a>}
               {notionConfig.captureDatabaseUrl && <a href={notionConfig.captureDatabaseUrl} target="_blank" rel="noreferrer">開啟收件匣</a>}
               {notionConfig.meetingDatabaseUrl && <a href={notionConfig.meetingDatabaseUrl} target="_blank" rel="noreferrer">開啟會議筆記</a>}
             </div>

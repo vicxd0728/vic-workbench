@@ -32,6 +32,7 @@ function sanitizeConfig(config = {}) {
     defaultDatabase: config.defaultDatabase || '',
     aiSummaryPageUrl: config.aiSummaryPageUrl || '',
     workbenchHubPageUrl: config.workbenchHubPageUrl || '',
+    workbenchDatabasePageUrl: config.workbenchDatabasePageUrl || '',
     captureDatabaseId: config.captureDatabaseId || '',
     captureDatabaseUrl: config.captureDatabaseUrl || '',
     meetingDatabaseId: config.meetingDatabaseId || '',
