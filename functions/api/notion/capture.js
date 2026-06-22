@@ -2,6 +2,16 @@ const NOTION_VERSION = '2022-06-28';
 const DEFAULT_CAPTURE_DATABASE_ID = '387ff6f424bb8196a0d7db4b72427a0b';
 
 const columns = {
+  title: '名稱',
+  type: '分類',
+  status: '處理狀態',
+  source: '輸入來源',
+  originalUrl: '原始連結',
+  content: '內容',
+  createdAt: '建立日期'
+};
+
+const legacyColumns = {
   title: 'Name',
   type: 'Type',
   status: 'Status',
@@ -12,23 +22,50 @@ const columns = {
 };
 
 const labels = {
-  pending: 'Pending',
-  archived: 'Archived',
+  pending: '待整理',
+  organized: '已整理',
+  archived: '封存',
   workbench: 'Vic Workbench'
 };
 
 const typeMap = {
-  task: 'Task',
-  note: 'Note',
-  idea: 'Idea',
-  link: 'Link',
-  meeting: 'Meeting',
-  voice: 'Voice Note'
+  task: '任務',
+  note: '筆記',
+  idea: '靈感',
+  link: '連結',
+  meeting: '會議',
+  voice: '語音紀錄'
+};
+
+const typeAliases = {
+  Task: 'task',
+  Note: 'note',
+  Idea: 'idea',
+  Link: 'link',
+  Meeting: 'meeting',
+  'Voice Note': 'voice',
+  任務: 'task',
+  筆記: 'note',
+  靈感: 'idea',
+  連結: 'link',
+  會議: 'meeting',
+  語音紀錄: 'voice'
+};
+
+const statusAliases = {
+  Pending: labels.pending,
+  Organized: labels.organized,
+  Archived: labels.archived,
+  待整理: labels.pending,
+  已整理: labels.organized,
+  封存: labels.archived
 };
 
 const sourceMap = {
-  '\u624b\u6a5f App': 'Mobile App',
-  '\u684c\u9762\u7db2\u9801': 'Desktop Web',
+  '手機 App': '手機 App',
+  '桌面網頁': '桌面網頁',
+  'Mobile App': '手機 App',
+  'Desktop Web': '桌面網頁',
   'Vic Workbench': 'Vic Workbench'
 };
 
@@ -40,8 +77,12 @@ function getPlainText(richText = []) {
   return richText.map((item) => item.plain_text || '').join('').trim();
 }
 
+function getProperty(properties = {}, name, legacyName, aliases = []) {
+  return properties[name] || properties[legacyName] || aliases.map((alias) => properties[alias]).find(Boolean);
+}
+
 function titleFromProperties(properties = {}) {
-  return getPlainText(properties[columns.title]?.title || []) || 'Untitled capture';
+  return getPlainText(getProperty(properties, columns.title, legacyColumns.title)?.title || []) || '未命名紀錄';
 }
 
 function textFromProperty(property) {
@@ -51,21 +92,30 @@ function textFromProperty(property) {
   return '';
 }
 
+function normalizeStatus(value) {
+  return statusAliases[value] || value || labels.pending;
+}
+
+function normalizeSource(value) {
+  return sourceMap[value] || value || labels.workbench;
+}
+
 function noteFromPage(page) {
   const properties = page.properties || {};
-  const typeLabel = properties[columns.type]?.select?.name || typeMap.note;
-  const type = Object.entries(typeMap).find(([, label]) => label === typeLabel)?.[0] || 'note';
+  const typeLabel = getProperty(properties, columns.type, legacyColumns.type, ['類型'])?.select?.name || typeMap.note;
+  const statusLabel = getProperty(properties, columns.status, legacyColumns.status, ['狀態'])?.select?.name || labels.pending;
+  const sourceLabel = getProperty(properties, columns.source, legacyColumns.source, ['來源'])?.select?.name || labels.workbench;
 
   return {
     id: page.id,
     notionPageId: page.id,
     title: titleFromProperties(properties),
-    type,
-    status: properties[columns.status]?.select?.name || labels.pending,
-    source: properties[columns.source]?.select?.name || labels.workbench,
-    content: textFromProperty(properties[columns.content]),
+    type: typeAliases[typeLabel] || 'note',
+    status: normalizeStatus(statusLabel),
+    source: normalizeSource(sourceLabel),
+    content: textFromProperty(getProperty(properties, columns.content, legacyColumns.content)),
     url: page.url,
-    originalUrl: textFromProperty(properties[columns.originalUrl]),
+    originalUrl: textFromProperty(getProperty(properties, columns.originalUrl, legacyColumns.originalUrl)),
     time: page.created_time,
     synced: true
   };
@@ -102,7 +152,7 @@ export async function onRequestGet({ request, env }) {
     const url = new URL(request.url);
     const token = env.NOTION_TOKEN || url.searchParams.get('token') || '';
     const databaseId = getDatabaseId(env, {}, url);
-    if (!token) return json({ ok: false, message: 'Notion token 尚未設定。' }, 400);
+    if (!token) return json({ ok: false, message: '尚未設定 Notion token。' }, 400);
 
     const data = await notionFetch(`/databases/${databaseId}/query`, token, {
       method: 'POST',
@@ -122,7 +172,7 @@ export async function onRequestGet({ request, env }) {
       notes: (data.results || []).map(noteFromPage)
     });
   } catch (error) {
-    return json({ ok: false, message: error.message || '讀取 Notion 收件匣失敗。' }, 500);
+    return json({ ok: false, message: error.message || '讀取 Notion 失敗。' }, 500);
   }
 }
 
@@ -131,18 +181,18 @@ export async function onRequestPost({ request, env }) {
     const body = await request.json();
     const token = getToken(env, body);
     const databaseId = getDatabaseId(env, body, new URL(request.url));
-    if (!token) return json({ ok: false, message: 'Notion token 尚未設定。' }, 400);
+    if (!token) return json({ ok: false, message: '尚未設定 Notion token。' }, 400);
 
     const title = String(body.title || '').trim();
-    if (!title) return json({ ok: false, message: '請先輸入紀錄內容。' }, 400);
+    if (!title) return json({ ok: false, message: '請先輸入要記錄的內容。' }, 400);
 
     const now = new Date().toISOString();
     const type = typeMap[body.type] || typeMap.note;
-    const source = sourceMap[body.source] || body.source || labels.workbench;
+    const source = normalizeSource(body.source);
     const properties = {
       [columns.title]: { title: [{ text: { content: title } }] },
       [columns.type]: { select: { name: type } },
-      [columns.status]: { select: { name: body.status || labels.pending } },
+      [columns.status]: { select: { name: normalizeStatus(body.status) } },
       [columns.source]: { select: { name: source } },
       [columns.createdAt]: { date: { start: now } },
       [columns.content]: { rich_text: [{ text: { content: String(body.content || title).slice(0, 1800) } }] }
@@ -171,7 +221,7 @@ export async function onRequestPost({ request, env }) {
 
     return json({ ok: true, note: noteFromPage(page) });
   } catch (error) {
-    return json({ ok: false, message: error.message || '寫入 Notion 收件匣失敗。' }, 500);
+    return json({ ok: false, message: error.message || '寫入 Notion 失敗。' }, 500);
   }
 }
 
@@ -179,12 +229,12 @@ export async function onRequestPatch({ request, env }) {
   try {
     const body = await request.json();
     const token = getToken(env, body);
-    if (!token) return json({ ok: false, message: 'Notion token 尚未設定。' }, 400);
+    if (!token) return json({ ok: false, message: '尚未設定 Notion token。' }, 400);
     if (!body.pageId) return json({ ok: false, message: '缺少 Notion page id。' }, 400);
 
     const properties = {};
     if (body.title) properties[columns.title] = { title: [{ text: { content: String(body.title).trim() } }] };
-    if (body.status) properties[columns.status] = { select: { name: body.status } };
+    if (body.status) properties[columns.status] = { select: { name: normalizeStatus(body.status) } };
     if (body.type) properties[columns.type] = { select: { name: typeMap[body.type] || body.type } };
     if (body.content) properties[columns.content] = { rich_text: [{ text: { content: String(body.content).slice(0, 1800) } }] };
 
@@ -195,7 +245,7 @@ export async function onRequestPatch({ request, env }) {
 
     return json({ ok: true, note: noteFromPage(page) });
   } catch (error) {
-    return json({ ok: false, message: error.message || '更新 Notion 收件匣失敗。' }, 500);
+    return json({ ok: false, message: error.message || '更新 Notion 失敗。' }, 500);
   }
 }
 
@@ -203,7 +253,7 @@ export async function onRequestDelete({ request, env }) {
   try {
     const body = await request.json();
     const token = getToken(env, body);
-    if (!token) return json({ ok: false, message: 'Notion token 尚未設定。' }, 400);
+    if (!token) return json({ ok: false, message: '尚未設定 Notion token。' }, 400);
     if (!body.pageId) return json({ ok: false, message: '缺少 Notion page id。' }, 400);
 
     await notionFetch(`/pages/${body.pageId}`, token, {
@@ -213,6 +263,6 @@ export async function onRequestDelete({ request, env }) {
 
     return json({ ok: true });
   } catch (error) {
-    return json({ ok: false, message: error.message || '封存 Notion 收件匣失敗。' }, 500);
+    return json({ ok: false, message: error.message || '刪除 Notion 紀錄失敗。' }, 500);
   }
 }

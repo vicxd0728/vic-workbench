@@ -72,7 +72,8 @@ const captureTypes = [
   { id: 'note', label: '筆記', icon: FileText },
   { id: 'idea', label: '靈感', icon: Sparkles },
   { id: 'link', label: '連結', icon: Link2 },
-  { id: 'meeting', label: '會議', icon: Mic }
+  { id: 'meeting', label: '會議', icon: Mic },
+  { id: 'voice', label: '語音紀錄', icon: Mic }
 ];
 
 const stageLabels = {
@@ -91,7 +92,7 @@ const typeLabels = {
   idea: '靈感',
   link: '連結',
   meeting: '會議',
-  voice: '語音'
+  voice: '語音紀錄'
 };
 
 const initialTasks = [];
