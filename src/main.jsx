@@ -215,10 +215,18 @@ const notionDatabaseDetails = {
   }
 };
 
+const workbenchNotionDefaults = {
+  hubUrl: 'https://app.notion.com/p/Vic-Workbench-Data-Center-387ff6f424bb81a890eddcee1a6abd2e',
+  captureId: '387ff6f424bb8196a0d7db4b72427a0b',
+  captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
+  meetingId: '387ff6f424bb8192ac4ef6b7e8791a1a',
+  meetingUrl: 'https://app.notion.com/p/387ff6f424bb8192ac4ef6b7e8791a1a'
+};
+
 const defaultNotionDatabaseConfig = {
-  tasks: { id: 'tasks', label: '任務資料庫', sourceType: 'database', databaseId: '', pageUrl: '', purpose: '任務同步、待辦與工作狀態', sortMode: 'updated', analysisLimit: 3, locked: true },
+  tasks: { id: 'tasks', label: '快速紀錄', sourceType: 'database', databaseId: workbenchNotionDefaults.captureUrl, pageUrl: '', purpose: '任務、筆記、靈感、連結與語音筆記統一收件匣', sortMode: 'updated', analysisLimit: 3, locked: true },
   knowledge: { id: 'knowledge', label: '客戶分析知識庫', sourceType: 'folder', databaseId: '', pageUrl: 'https://app.notion.com/p/356ff6f424bb81d4a9a8c4a997fcffc6', purpose: '客戶分析週報、每日數據與詢盤攻堅紀錄', sortMode: 'title-date-desc', analysisLimit: 3, locked: true },
-  meetings: { id: 'meetings', label: '會議筆記', sourceType: 'folder', databaseId: '', pageUrl: '', purpose: '會議逐字稿、重點摘要與決議', sortMode: 'updated', analysisLimit: 3, locked: true }
+  meetings: { id: 'meetings', label: '會議筆記', sourceType: 'database', databaseId: workbenchNotionDefaults.meetingUrl, pageUrl: '', purpose: '會議逐字稿、重點摘要與決議', sortMode: 'updated', analysisLimit: 3, locked: true }
 };
 
 const notionSortOptions = [
@@ -243,11 +251,11 @@ function normalizeNotionDatabaseConfigs(notionConfig) {
 
     configs[id] = {
       id,
-      label: stored.label || defaults.label || preset?.label || '自訂資料庫',
+      label: storedHasSource ? (stored.label || defaults.label || preset?.label || '自訂資料庫') : (defaults.label || stored.label || preset?.label || '自訂資料庫'),
       sourceType: storedHasSource ? (stored.sourceType || defaults.sourceType || 'database') : (defaults.sourceType || stored.sourceType || 'database'),
       databaseId: stored.databaseId || defaults.databaseId || '',
       pageUrl: stored.pageUrl || defaults.pageUrl || '',
-      purpose: stored.purpose || defaults.purpose || preset?.purpose || '自訂 Notion 資料庫',
+      purpose: storedHasSource ? (stored.purpose || defaults.purpose || preset?.purpose || '自訂 Notion 資料庫') : (defaults.purpose || stored.purpose || preset?.purpose || '自訂 Notion 資料庫'),
       sortMode: stored.sortMode || defaults.sortMode || 'updated',
       analysisLimit: Math.min(3, Math.max(1, Number(stored.analysisLimit || defaults.analysisLimit || 3))),
       locked: Boolean(defaults.locked || stored.locked)
@@ -398,14 +406,6 @@ function usePersistentState(key, fallbackValue) {
 
   return [value, setValue];
 }
-
-const workbenchNotionDefaults = {
-  hubUrl: 'https://app.notion.com/p/Vic-Workbench-Data-Center-387ff6f424bb81a890eddcee1a6abd2e',
-  captureId: '387ff6f424bb8196a0d7db4b72427a0b',
-  captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
-  meetingId: '387ff6f424bb8192ac4ef6b7e8791a1a',
-  meetingUrl: 'https://app.notion.com/p/387ff6f424bb8192ac4ef6b7e8791a1a'
-};
 
 const retiredWorkbenchNotionIds = new Set([
   '6ba5f30036de43d7b64b4b1d2d91c0b5',
