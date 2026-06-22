@@ -3653,7 +3653,7 @@ a {
 .inboxRow {
   min-height: 40px;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto 58px;
+  grid-template-columns: 20px minmax(0, 1fr) auto 58px 72px;
   align-items: center;
   gap: 8px;
   color: #475569;
@@ -3671,6 +3671,29 @@ a {
   text-align: right;
   color: var(--muted);
   font-size: 12px;
+}
+
+.inboxRowActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.inboxRowActions button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(125, 166, 217, 0.2);
+  border-radius: 8px;
+  color: #9fb2cc;
+  background: rgba(6, 15, 28, 0.36);
+}
+
+.inboxRowActions button:hover {
+  border-color: rgba(125, 211, 252, 0.42);
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.1);
 }
 
 .resourcesPanel .railTitle button {
@@ -4825,9 +4848,18 @@ body {
   }
 
   .sourceStatusTable button,
-  .systemRows div {
+  .systemRows div,
+  .inboxRow {
     grid-template-columns: 1fr;
     gap: 5px;
+  }
+
+  .inboxRow span {
+    text-align: left;
+  }
+
+  .inboxRowActions {
+    justify-content: flex-start;
   }
 
   .sourceTag {

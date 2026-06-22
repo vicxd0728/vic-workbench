@@ -636,6 +636,18 @@ function App() {
     setLastAction('已標記為已同步');
   }
 
+  function updateNote(id, title) {
+    const nextTitle = title.trim();
+    if (!nextTitle) return;
+    setNotes((current) => current.map((note) => (note.id === id ? { ...note, title: nextTitle, synced: false, time: '剛剛' } : note)));
+    setLastAction('已更新知識收件匣');
+  }
+
+  function deleteNote(id) {
+    setNotes((current) => current.filter((note) => note.id !== id));
+    setLastAction('已刪除知識收件匣項目');
+  }
+
   function clearLocalData() {
     setTasks(initialTasks);
     setNotes(initialNotes);
@@ -691,6 +703,8 @@ function App() {
           moveTask={moveTask}
           deleteTask={deleteTask}
           syncNote={syncNote}
+          updateNote={updateNote}
+          deleteNote={deleteNote}
           resetDemoData={clearLocalData}
           newsState={newsState}
           erpBoard={erpBoard}
@@ -725,6 +739,8 @@ function ActiveView(props) {
     moveTask,
     deleteTask,
     syncNote,
+    updateNote,
+    deleteNote,
     resetDemoData,
     newsState,
     erpBoard
@@ -739,7 +755,7 @@ function ActiveView(props) {
         </div>
         <aside className="insightRail">
           <NotionPanel notes={notes} syncNote={syncNote} />
-          <KnowledgePanel notes={notes} />
+          <KnowledgePanel notes={notes} updateNote={updateNote} deleteNote={deleteNote} />
         </aside>
       </section>
     );
@@ -752,7 +768,7 @@ function ActiveView(props) {
           <PageHeader title="快速紀錄" subtitle="快速收集想法、語音逐字稿、待整理連結，之後再送到 Notion。" />
           <CapturePanel {...{ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction }} />
           <VoiceNotePanel addVoiceNote={addVoiceNote} />
-          <KnowledgePanel notes={notes} expanded />
+          <KnowledgePanel notes={notes} expanded updateNote={updateNote} deleteNote={deleteNote} />
         </div>
         <aside className="insightRail">
           <NotionPanel notes={notes} syncNote={syncNote} />
@@ -2685,7 +2701,13 @@ function NotionPanel({ notes, syncNote }) {
   );
 }
 
-function KnowledgePanel({ notes, expanded = false }) {
+function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote }) {
+  function editNote(note) {
+    const nextTitle = window.prompt('編輯知識收件匣內容', note.title);
+    if (nextTitle === null) return;
+    updateNote?.(note.id, nextTitle);
+  }
+
   return (
     <section className="panel inboxPanel">
       <PanelTitle title="知識收件匣" count={notes.length} />
@@ -2695,9 +2717,14 @@ function KnowledgePanel({ notes, expanded = false }) {
           return (
             <article className="inboxRow" key={note.id}>
               <Icon size={16} /><strong>{note.title}</strong><em>{typeLabels[note.type]}</em><span>{note.synced ? '已同步' : note.time}</span>
+              <div className="inboxRowActions">
+                <button type="button" aria-label="編輯" onClick={() => editNote(note)}><FileText size={14} /></button>
+                <button type="button" aria-label="刪除" onClick={() => deleteNote?.(note.id)}><Trash2 size={14} /></button>
+              </div>
             </article>
           );
         })}
+        {notes.length === 0 && <div className="emptyState">目前沒有快速紀錄。</div>}
       </div>
     </section>
   );
