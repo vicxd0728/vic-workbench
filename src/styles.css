@@ -2049,6 +2049,66 @@ a {
   font-size: 13px;
 }
 
+.captureSyncState {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 14px 14px;
+  padding: 11px 12px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 9px;
+  background: rgba(6, 15, 28, 0.34);
+}
+
+.captureSyncState div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.captureSyncState strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.captureSyncState span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.captureSyncState button,
+.inboxSyncHeader button,
+.notionLinkActions a {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(125, 166, 217, 0.22);
+  border-radius: 8px;
+  color: #d8e8ff;
+  background: rgba(10, 24, 42, 0.64);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.captureSyncState button,
+.inboxSyncHeader button {
+  padding: 0 12px;
+}
+
+.captureSyncState.ready,
+.inboxSyncBanner.ready {
+  border-color: rgba(45, 212, 191, 0.28);
+}
+
+.captureSyncState.error,
+.inboxSyncBanner.error {
+  border-color: rgba(248, 113, 113, 0.34);
+}
+
 .voicePanel {
   display: grid;
   gap: 14px;
@@ -3151,6 +3211,16 @@ a {
   line-height: 1.55;
 }
 
+.notionLinkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notionLinkActions a {
+  padding: 0 12px;
+}
+
 .sourceManager {
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(380px, 1fr);
@@ -3694,6 +3764,25 @@ a {
   border-color: rgba(125, 211, 252, 0.42);
   color: #7dd3fc;
   background: rgba(56, 189, 248, 0.1);
+}
+
+.inboxSyncHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.inboxSyncBanner {
+  margin-bottom: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 8px;
+  color: #b9c9df;
+  background: rgba(6, 15, 28, 0.32);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .resourcesPanel .railTitle button {

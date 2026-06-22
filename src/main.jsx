@@ -399,15 +399,40 @@ function usePersistentState(key, fallbackValue) {
   return [value, setValue];
 }
 
+const workbenchNotionDefaults = {
+  hubUrl: 'https://app.notion.com/p/Vic-Workbench-Data-Center-387ff6f424bb81a890eddcee1a6abd2e',
+  captureId: '387ff6f424bb8196a0d7db4b72427a0b',
+  captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
+  meetingId: '387ff6f424bb8192ac4ef6b7e8791a1a',
+  meetingUrl: 'https://app.notion.com/p/387ff6f424bb8192ac4ef6b7e8791a1a'
+};
+
+const retiredWorkbenchNotionIds = new Set([
+  '6ba5f30036de43d7b64b4b1d2d91c0b5',
+  'e19ee4a9a1fb40d5aadef487a3d07356'
+]);
+
+function migrateWorkbenchNotionConfig(config = {}) {
+  const captureId = retiredWorkbenchNotionIds.has(config.captureDatabaseId) ? '' : config.captureDatabaseId;
+  const meetingId = retiredWorkbenchNotionIds.has(config.meetingDatabaseId) ? '' : config.meetingDatabaseId;
+  return { ...config, captureDatabaseId: captureId, meetingDatabaseId: meetingId };
+}
+
 function sanitizeSyncedNotionConfig(config = {}) {
+  const migratedConfig = migrateWorkbenchNotionConfig(config);
   return {
-    workspaceUrl: config.workspaceUrl || '',
+    workspaceUrl: migratedConfig.workspaceUrl || '',
     token: '',
-    defaultDatabase: config.defaultDatabase || '',
-    aiSummaryPageUrl: config.aiSummaryPageUrl || '',
-    sourceSeenAt: config.sourceSeenAt || {},
-    databases: config.databases || defaultNotionDatabaseConfig,
-    newsKeywords: config.newsKeywords || '國際, 金融, 匯率, 供應鏈'
+    defaultDatabase: migratedConfig.defaultDatabase || '',
+    aiSummaryPageUrl: migratedConfig.aiSummaryPageUrl || '',
+    workbenchHubPageUrl: migratedConfig.workbenchHubPageUrl || workbenchNotionDefaults.hubUrl,
+    captureDatabaseId: migratedConfig.captureDatabaseId || workbenchNotionDefaults.captureId,
+    captureDatabaseUrl: migratedConfig.captureDatabaseUrl || workbenchNotionDefaults.captureUrl,
+    meetingDatabaseId: migratedConfig.meetingDatabaseId || workbenchNotionDefaults.meetingId,
+    meetingDatabaseUrl: migratedConfig.meetingDatabaseUrl || workbenchNotionDefaults.meetingUrl,
+    sourceSeenAt: migratedConfig.sourceSeenAt || {},
+    databases: migratedConfig.databases || defaultNotionDatabaseConfig,
+    newsKeywords: migratedConfig.newsKeywords || '國際, 金融, 匯率, 供應鏈'
   };
 }
 
@@ -434,6 +459,11 @@ function mergeSyncedNotionConfig(remoteConfig = {}, localConfig = {}) {
     workspaceUrl: local.workspaceUrl || remote.workspaceUrl,
     defaultDatabase: local.defaultDatabase || remote.defaultDatabase,
     aiSummaryPageUrl: local.aiSummaryPageUrl || remote.aiSummaryPageUrl,
+    workbenchHubPageUrl: local.workbenchHubPageUrl || remote.workbenchHubPageUrl,
+    captureDatabaseId: local.captureDatabaseId || remote.captureDatabaseId,
+    captureDatabaseUrl: local.captureDatabaseUrl || remote.captureDatabaseUrl,
+    meetingDatabaseId: local.meetingDatabaseId || remote.meetingDatabaseId,
+    meetingDatabaseUrl: local.meetingDatabaseUrl || remote.meetingDatabaseUrl,
     sourceSeenAt: { ...(remote.sourceSeenAt || {}), ...(local.sourceSeenAt || {}) },
     databases,
     newsKeywords: local.newsKeywords || remote.newsKeywords,
@@ -499,6 +529,11 @@ function App() {
     token: '',
     defaultDatabase: '',
     aiSummaryPageUrl: '',
+    workbenchHubPageUrl: workbenchNotionDefaults.hubUrl,
+    captureDatabaseId: workbenchNotionDefaults.captureId,
+    captureDatabaseUrl: workbenchNotionDefaults.captureUrl,
+    meetingDatabaseId: workbenchNotionDefaults.meetingId,
+    meetingDatabaseUrl: workbenchNotionDefaults.meetingUrl,
     sourceSeenAt: {},
     databases: defaultNotionDatabaseConfig,
     newsKeywords: '國際, 金融, 匯率, 供應鏈'
@@ -508,9 +543,55 @@ function App() {
   const [draft, setDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [lastAction, setLastAction] = useState('準備開始');
+  const [captureSync, setCaptureSync] = useState({ status: 'idle', message: '' });
   const newsState = useNewsBriefs();
   const notionData = useNotionSources(notionConfig, setNotionConfig);
   const erpBoard = useErpBoardSummary();
+
+  async function refreshCaptureInbox({ silent = false } = {}) {
+    if (!silent) setCaptureSync({ status: 'loading', message: '正在同步 Notion 收件匣...' });
+    try {
+      const params = new URLSearchParams();
+      const isLocalPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      if (notionConfig.captureDatabaseId) params.set('databaseId', notionConfig.captureDatabaseId);
+      if (notionConfig.token && isLocalPreview) params.set('token', notionConfig.token);
+      const response = await fetch(`/api/notion/capture?${params.toString()}`);
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || '讀取 Notion 收件匣失敗。');
+      setNotes(data.notes || []);
+      setCaptureSync({ status: 'ready', message: `已同步 ${data.count || 0} 筆 Notion 收件匣資料。` });
+    } catch (error) {
+      setCaptureSync({ status: 'error', message: error.message || 'Notion 收件匣同步失敗。' });
+    }
+  }
+
+  async function createCaptureInNotion(payload) {
+    const response = await fetch('/api/notion/capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        token: notionConfig.token,
+        databaseId: notionConfig.captureDatabaseId
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.message || '寫入 Notion 收件匣失敗。');
+    return data.note;
+  }
+
+  useEffect(() => {
+    refreshCaptureInbox({ silent: true });
+    const interval = window.setInterval(() => refreshCaptureInbox({ silent: true }), 60000);
+    const refreshOnFocus = () => {
+      if (document.visibilityState === 'visible') refreshCaptureInbox({ silent: true });
+    };
+    document.addEventListener('visibilitychange', refreshOnFocus);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshOnFocus);
+    };
+  }, [notionConfig.captureDatabaseId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -595,26 +676,64 @@ function App() {
     return { completed, open, syncQueue, progress };
   }, [notes, tasks]);
 
-  function handleCapture() {
+  async function handleCapture() {
     const title = draft.trim();
     if (!title) return;
+
+    setLastAction('正在寫入 Notion 收件匣...');
+    setCaptureSync({ status: 'loading', message: '正在寫入 Notion 收件匣...' });
 
     if (captureType === 'task') {
       setTasks((current) => [
         { id: Date.now(), title, area: '快速紀錄', stage: 'today', estimate: '15 分', done: false, important: false },
         ...current
       ]);
-      setLastAction('已新增到今日任務');
-    } else {
-      setNotes((current) => [{ id: Date.now(), title, type: captureType, time: '剛剛', synced: false }, ...current]);
-      setLastAction('已加入知識暫存');
     }
-    setDraft('');
+
+    try {
+      const note = await createCaptureInNotion({
+        title,
+        type: captureType,
+        content: title,
+        source: window.matchMedia('(display-mode: standalone)').matches ? '手機 App' : '桌面網頁'
+      });
+      setNotes((current) => [note, ...current.filter((item) => item.id !== note.id)]);
+      setDraft('');
+      setLastAction(captureType === 'task' ? '已新增任務並寫入 Notion' : '已寫入 Notion 收件匣');
+      setCaptureSync({ status: 'ready', message: '已寫入 Notion 收件匣。' });
+    } catch (error) {
+      const fallbackNote = { id: Date.now(), title, type: captureType, time: '本機暫存', synced: false };
+      setNotes((current) => [fallbackNote, ...current]);
+      setDraft('');
+      setLastAction('Notion 寫入失敗，已先保留本機暫存');
+      setCaptureSync({ status: 'error', message: error.message || 'Notion 寫入失敗，已先保留本機暫存。' });
+    }
   }
 
-  function addVoiceNote(note) {
-    setNotes((current) => [note, ...current]);
-    setLastAction('語音筆記已加入快速紀錄');
+  async function addVoiceNote(note) {
+    setLastAction('正在寫入語音筆記...');
+    setCaptureSync({ status: 'loading', message: '正在寫入語音筆記到 Notion...' });
+    try {
+      const content = [
+        note.transcript,
+        note.highlights?.length ? `\n\n重點：\n${note.highlights.map((item) => `- ${item}`).join('\n')}` : ''
+      ].join('').trim();
+      const savedNote = await createCaptureInNotion({
+        title: note.title,
+        type: 'voice',
+        content,
+        source: window.matchMedia('(display-mode: standalone)').matches ? '手機 App' : '桌面網頁'
+      });
+      setNotes((current) => [savedNote, ...current.filter((item) => item.id !== savedNote.id)]);
+      setLastAction('語音筆記已寫入 Notion');
+      setCaptureSync({ status: 'ready', message: '語音筆記已寫入 Notion 收件匣。' });
+      return true;
+    } catch (error) {
+      setNotes((current) => [note, ...current]);
+      setLastAction('語音筆記寫入失敗，已先保留本機暫存');
+      setCaptureSync({ status: 'error', message: error.message || '語音筆記寫入 Notion 失敗。' });
+      return false;
+    }
   }
 
   function toggleTask(id) {
@@ -636,16 +755,48 @@ function App() {
     setLastAction('已標記為已同步');
   }
 
-  function updateNote(id, title) {
+  async function updateNote(id, title) {
     const nextTitle = title.trim();
     if (!nextTitle) return;
-    setNotes((current) => current.map((note) => (note.id === id ? { ...note, title: nextTitle, synced: false, time: '剛剛' } : note)));
-    setLastAction('已更新知識收件匣');
+    const target = notes.find((note) => note.id === id);
+    setNotes((current) => current.map((note) => (note.id === id ? { ...note, title: nextTitle, synced: false, time: '同步中' } : note)));
+    try {
+      if (target?.notionPageId) {
+        const response = await fetch('/api/notion/capture', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: notionConfig.token, pageId: target.notionPageId, title: nextTitle, content: nextTitle })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || '更新 Notion 收件匣失敗。');
+        setNotes((current) => current.map((note) => (note.id === id ? data.note : note)));
+      }
+      setLastAction('已更新 Notion 收件匣');
+    } catch (error) {
+      setCaptureSync({ status: 'error', message: error.message || '更新 Notion 收件匣失敗。' });
+      setLastAction('更新失敗，請稍後重試');
+    }
   }
 
-  function deleteNote(id) {
+  async function deleteNote(id) {
+    const target = notes.find((note) => note.id === id);
     setNotes((current) => current.filter((note) => note.id !== id));
-    setLastAction('已刪除知識收件匣項目');
+    try {
+      if (target?.notionPageId) {
+        const response = await fetch('/api/notion/capture', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: notionConfig.token, pageId: target.notionPageId })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || '封存 Notion 收件匣項目失敗。');
+      }
+      setLastAction('已從 Workbench 移除並封存 Notion 項目');
+    } catch (error) {
+      setNotes((current) => target ? [target, ...current] : current);
+      setCaptureSync({ status: 'error', message: error.message || '刪除 Notion 收件匣項目失敗。' });
+      setLastAction('刪除失敗，已還原項目');
+    }
   }
 
   function clearLocalData() {
@@ -705,6 +856,8 @@ function App() {
           syncNote={syncNote}
           updateNote={updateNote}
           deleteNote={deleteNote}
+          captureSync={captureSync}
+          refreshCaptureInbox={refreshCaptureInbox}
           resetDemoData={clearLocalData}
           newsState={newsState}
           erpBoard={erpBoard}
@@ -741,6 +894,8 @@ function ActiveView(props) {
     syncNote,
     updateNote,
     deleteNote,
+    captureSync,
+    refreshCaptureInbox,
     resetDemoData,
     newsState,
     erpBoard
@@ -755,7 +910,7 @@ function ActiveView(props) {
         </div>
         <aside className="insightRail">
           <NotionPanel notes={notes} syncNote={syncNote} />
-          <KnowledgePanel notes={notes} updateNote={updateNote} deleteNote={deleteNote} />
+          <KnowledgePanel notes={notes} updateNote={updateNote} deleteNote={deleteNote} captureSync={captureSync} refreshCaptureInbox={refreshCaptureInbox} />
         </aside>
       </section>
     );
@@ -766,9 +921,9 @@ function ActiveView(props) {
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
           <PageHeader title="快速紀錄" subtitle="快速收集想法、語音逐字稿、待整理連結，之後再送到 Notion。" />
-          <CapturePanel {...{ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction }} />
+          <CapturePanel {...{ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction, captureSync, refreshCaptureInbox }} />
           <VoiceNotePanel addVoiceNote={addVoiceNote} />
-          <KnowledgePanel notes={notes} expanded updateNote={updateNote} deleteNote={deleteNote} />
+          <KnowledgePanel notes={notes} expanded updateNote={updateNote} deleteNote={deleteNote} captureSync={captureSync} refreshCaptureInbox={refreshCaptureInbox} />
         </div>
         <aside className="insightRail">
           <NotionPanel notes={notes} syncNote={syncNote} />
@@ -1316,7 +1471,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   );
 }
 
-function CapturePanel({ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction }) {
+function CapturePanel({ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction, captureSync, refreshCaptureInbox }) {
   return (
     <section className="capturePanel">
       <textarea
@@ -1337,6 +1492,13 @@ function CapturePanel({ captureType, setCaptureType, draft, setDraft, handleCapt
         </div>
         <span className="statusHint">{lastAction}</span>
         <button className="primaryAction" onClick={handleCapture}><Plus size={17} />新增</button>
+      </div>
+      <div className={`captureSyncState ${captureSync?.status || 'idle'}`}>
+        <div>
+          <strong>Notion 收件匣</strong>
+          <span>{captureSync?.message || '快速紀錄會統一寫入 Notion，兩邊開啟時自動同步。'}</span>
+        </div>
+        <button type="button" onClick={() => refreshCaptureInbox?.()}><RotateCcw size={15} />重新同步</button>
       </div>
     </section>
   );
@@ -1392,13 +1554,14 @@ function VoiceNotePanel({ addVoiceNote }) {
     recognition.start();
   }
 
-  function saveVoiceNote() {
+  async function saveVoiceNote() {
     const content = transcript.trim();
     if (!content) {
       setVoiceStatus('目前沒有可儲存的轉文字內容');
       return;
     }
-    addVoiceNote({
+    setVoiceStatus('正在寫入 Notion 收件匣...');
+    const ok = await addVoiceNote({
       id: Date.now(),
       title: keyPoints[0] || content.slice(0, 36),
       type: 'voice',
@@ -1409,7 +1572,7 @@ function VoiceNotePanel({ addVoiceNote }) {
     });
     setTranscript('');
     setInterimText('');
-    setVoiceStatus('已存成語音重點筆記');
+    setVoiceStatus(ok ? '已存成 Notion 語音重點筆記' : 'Notion 寫入失敗，已先保留本機暫存');
   }
 
   return (
@@ -2321,6 +2484,18 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, appearance, setAppea
             <label><span>Notion API Token</span><input value={notionConfig.token} onChange={(event) => updateConfig('token', event.target.value)} placeholder="只供本機測試，正式用 Cloudflare Secret" type="password" /></label>
             <label><span>新聞關鍵字</span><input value={notionConfig.newsKeywords} onChange={(event) => updateConfig('newsKeywords', event.target.value)} placeholder="AI, 工具, 市場趨勢" /></label>
           </div>
+          <div className="notionSetup focused">
+            <label><span>Workbench 資料中心</span><input value={notionConfig.workbenchHubPageUrl || ''} onChange={(event) => updateConfig('workbenchHubPageUrl', event.target.value)} placeholder="Notion 資料中心連結" /></label>
+            <label><span>快速紀錄資料庫</span><input value={notionConfig.captureDatabaseUrl || ''} onChange={(event) => updateConfig('captureDatabaseUrl', event.target.value)} placeholder="快速紀錄 / 知識收件匣連結" /></label>
+            <label><span>會議筆記資料庫</span><input value={notionConfig.meetingDatabaseUrl || ''} onChange={(event) => updateConfig('meetingDatabaseUrl', event.target.value)} placeholder="會議筆記資料庫連結" /></label>
+            <label><span>快速紀錄 Database ID</span><input value={notionConfig.captureDatabaseId || ''} onChange={(event) => updateConfig('captureDatabaseId', event.target.value)} placeholder="Notion database id" /></label>
+            <label><span>會議筆記 Database ID</span><input value={notionConfig.meetingDatabaseId || ''} onChange={(event) => updateConfig('meetingDatabaseId', event.target.value)} placeholder="Notion database id" /></label>
+            <div className="notionLinkActions">
+              {notionConfig.workbenchHubPageUrl && <a href={notionConfig.workbenchHubPageUrl} target="_blank" rel="noreferrer">開啟資料中心</a>}
+              {notionConfig.captureDatabaseUrl && <a href={notionConfig.captureDatabaseUrl} target="_blank" rel="noreferrer">開啟收件匣</a>}
+              {notionConfig.meetingDatabaseUrl && <a href={notionConfig.meetingDatabaseUrl} target="_blank" rel="noreferrer">開啟會議筆記</a>}
+            </div>
+          </div>
           <div className="settingsInfoGrid">
             <article><ShieldAlert size={18} /><strong>正式密鑰</strong><p>Notion、遠端控制與代理 token 都應放在 Cloudflare Secrets 或本機 `.env`，不放到 GitHub。</p></article>
             <article><Command size={18} /><strong>遠端控制確認</strong><p>關機、重開機、睡眠都需要控制密鑰與繁中確認字，避免誤觸。</p></article>
@@ -2701,7 +2876,7 @@ function NotionPanel({ notes, syncNote }) {
   );
 }
 
-function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote }) {
+function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captureSync, refreshCaptureInbox }) {
   function editNote(note) {
     const nextTitle = window.prompt('編輯知識收件匣內容', note.title);
     if (nextTitle === null) return;
@@ -2710,7 +2885,11 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote }) {
 
   return (
     <section className="panel inboxPanel">
-      <PanelTitle title="知識收件匣" count={notes.length} />
+      <div className="inboxSyncHeader">
+        <PanelTitle title="知識收件匣" count={notes.length} />
+        <button type="button" onClick={() => refreshCaptureInbox?.()}><RotateCcw size={14} />同步</button>
+      </div>
+      {captureSync?.message && <div className={`inboxSyncBanner ${captureSync.status}`}>{captureSync.message}</div>}
       <div className="inboxRows">
         {notes.slice(0, expanded ? 12 : 6).map((note) => {
           const Icon = note.type === 'voice' ? Mic : captureTypes.find((type) => type.id === note.type)?.icon || FileText;
