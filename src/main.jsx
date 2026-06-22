@@ -1617,6 +1617,30 @@ function formatKnowledgeTime(value) {
   }
 }
 
+function parseNoteTime(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isSameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function isSameLocalMonth(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+const inboxTimeFilters = [
+  { id: 'today', label: '今日' },
+  { id: '7d', label: '7 天內' },
+  { id: 'month', label: '本月' },
+  { id: 'custom', label: '自訂' },
+  { id: 'all', label: '全部' }
+];
+
+const inboxLimitOptions = [6, 12, 24, 50];
+
 function splitSummaryHighlights(text = '') {
   return text
     .replace(/[#*_`]/g, ' ')
@@ -2885,6 +2909,28 @@ function NotionPanel({ notes, syncNote }) {
 }
 
 function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captureSync, refreshCaptureInbox }) {
+  const [timeFilter, setTimeFilter] = useState(expanded ? '7d' : 'today');
+  const [customRange, setCustomRange] = useState({ from: '', to: '' });
+  const [displayLimit, setDisplayLimit] = useState(expanded ? 24 : 6);
+  const filteredNotes = useMemo(() => {
+    const now = new Date();
+    return notes.filter((note) => {
+      const noteTime = parseNoteTime(note.time || note.createdAt || note.lastEditedTime);
+      if (timeFilter === 'all') return true;
+      if (!noteTime) return false;
+      if (timeFilter === 'today') return isSameLocalDay(noteTime, now);
+      if (timeFilter === '7d') return noteTime >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      if (timeFilter === 'month') return isSameLocalMonth(noteTime, now);
+      if (timeFilter === 'custom') {
+        const from = customRange.from ? new Date(`${customRange.from}T00:00:00`) : null;
+        const to = customRange.to ? new Date(`${customRange.to}T23:59:59`) : null;
+        return (!from || noteTime >= from) && (!to || noteTime <= to);
+      }
+      return true;
+    });
+  }, [customRange.from, customRange.to, notes, timeFilter]);
+  const visibleNotes = filteredNotes.slice(0, displayLimit);
+
   function editNote(note) {
     const nextTitle = window.prompt('編輯知識收件匣內容', note.title);
     if (nextTitle === null) return;
@@ -2894,16 +2940,38 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
   return (
     <section className="panel inboxPanel">
       <div className="inboxSyncHeader">
-        <PanelTitle title="知識收件匣" count={notes.length} />
+        <PanelTitle title="知識收件匣" count={filteredNotes.length} />
         <button type="button" onClick={() => refreshCaptureInbox?.()}><RotateCcw size={14} />同步</button>
       </div>
       {captureSync?.message && <div className={`inboxSyncBanner ${captureSync.status}`}>{captureSync.message}</div>}
+      <div className="inboxFilters">
+        <div className="inboxFilterTabs" role="tablist" aria-label="知識收件匣時間篩選">
+          {inboxTimeFilters.map((item) => (
+            <button type="button" className={timeFilter === item.id ? 'activeInboxFilter' : ''} key={item.id} onClick={() => setTimeFilter(item.id)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <label>
+          <span>顯示</span>
+          <select value={displayLimit} onChange={(event) => setDisplayLimit(Number(event.target.value))}>
+            {inboxLimitOptions.map((limit) => <option value={limit} key={limit}>{limit} 筆</option>)}
+          </select>
+        </label>
+      </div>
+      {timeFilter === 'custom' && (
+        <div className="inboxCustomRange">
+          <label><span>起</span><input type="date" value={customRange.from} onChange={(event) => setCustomRange((current) => ({ ...current, from: event.target.value }))} /></label>
+          <label><span>迄</span><input type="date" value={customRange.to} onChange={(event) => setCustomRange((current) => ({ ...current, to: event.target.value }))} /></label>
+        </div>
+      )}
+      <div className="inboxResultMeta">顯示 {visibleNotes.length} 筆，符合條件 {filteredNotes.length} 筆，總資料 {notes.length} 筆。</div>
       <div className="inboxRows">
-        {notes.slice(0, expanded ? 12 : 6).map((note) => {
+        {visibleNotes.map((note) => {
           const Icon = note.type === 'voice' ? Mic : captureTypes.find((type) => type.id === note.type)?.icon || FileText;
           return (
             <article className="inboxRow" key={note.id}>
-              <Icon size={16} /><strong>{note.title}</strong><em>{typeLabels[note.type]}</em><span>{note.synced ? '已同步' : note.time}</span>
+              <Icon size={16} /><strong>{note.title}</strong><em>{typeLabels[note.type]}</em><span>{formatKnowledgeTime(note.time)}</span>
               <div className="inboxRowActions">
                 <button type="button" aria-label="編輯" onClick={() => editNote(note)}><FileText size={14} /></button>
                 <button type="button" aria-label="刪除" onClick={() => deleteNote?.(note.id)}><Trash2 size={14} /></button>
@@ -2912,6 +2980,7 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
           );
         })}
         {notes.length === 0 && <div className="emptyState">目前沒有快速紀錄。</div>}
+        {notes.length > 0 && filteredNotes.length === 0 && <div className="emptyState">這個時間範圍沒有資料。</div>}
       </div>
     </section>
   );

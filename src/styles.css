@@ -3785,6 +3785,70 @@ a {
   line-height: 1.45;
 }
 
+.inboxFilters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.inboxFilterTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inboxFilterTabs button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 8px;
+  color: #9fb2cc;
+  background: rgba(6, 15, 28, 0.28);
+  font-size: 12px;
+}
+
+.inboxFilterTabs button:hover,
+.inboxFilterTabs .activeInboxFilter {
+  border-color: rgba(125, 211, 252, 0.38);
+  color: #eff8ff;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.inboxFilters label,
+.inboxCustomRange label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #9fb2cc;
+  font-size: 12px;
+}
+
+.inboxFilters select,
+.inboxCustomRange input {
+  min-height: 32px;
+  max-width: 128px;
+  border: 1px solid rgba(125, 166, 217, 0.2);
+  border-radius: 8px;
+  color: #f8fbff;
+  background: rgba(6, 15, 28, 0.44);
+  padding: 0 9px;
+}
+
+.inboxCustomRange {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -2px 0 10px;
+}
+
+.inboxResultMeta {
+  margin-bottom: 10px;
+  color: #8da2be;
+  font-size: 12px;
+}
+
 .resourcesPanel .railTitle button {
   margin-left: auto;
   display: inline-flex;
