@@ -221,7 +221,7 @@ const workbenchNotionDefaults = {
   captureId: '387ff6f424bb8196a0d7db4b72427a0b',
   captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
   meetingId: '387ff6f424bb8192ac4ef6b7e8791a1a',
-  meetingUrl: 'https://app.notion.com/p/387ff6f424bb8192ac4ef6b7e8791a1a'
+  meetingUrl: 'https://app.notion.com/p/387ff6f424bb8192ac4ef6b7e8791a1a?v=387ff6f424bb810ba54c000c1d602d55'
 };
 
 const defaultNotionDatabaseConfig = {
@@ -249,14 +249,16 @@ function normalizeNotionDatabaseConfigs(notionConfig) {
     const id = stored.id || defaults.id || key;
     const preset = notionDatabases.find((item) => item.id === id);
     const storedHasSource = Boolean(stored.databaseId || stored.pageUrl);
+    const storedLabel = /[?]{2,}/.test(stored.label || '') ? '' : stored.label;
+    const storedPurpose = /[?]{2,}/.test(stored.purpose || '') ? '' : stored.purpose;
 
     configs[id] = {
       id,
-      label: storedHasSource ? (stored.label || defaults.label || preset?.label || '自訂資料庫') : (defaults.label || stored.label || preset?.label || '自訂資料庫'),
+      label: storedHasSource ? (storedLabel || defaults.label || preset?.label || '自訂資料庫') : (defaults.label || storedLabel || preset?.label || '自訂資料庫'),
       sourceType: storedHasSource ? (stored.sourceType || defaults.sourceType || 'database') : (defaults.sourceType || stored.sourceType || 'database'),
       databaseId: stored.databaseId || defaults.databaseId || '',
       pageUrl: stored.pageUrl || defaults.pageUrl || '',
-      purpose: storedHasSource ? (stored.purpose || defaults.purpose || preset?.purpose || '自訂 Notion 資料庫') : (defaults.purpose || stored.purpose || preset?.purpose || '自訂 Notion 資料庫'),
+      purpose: storedHasSource ? (storedPurpose || defaults.purpose || preset?.purpose || '自訂 Notion 資料庫') : (defaults.purpose || storedPurpose || preset?.purpose || '自訂 Notion 資料庫'),
       sortMode: stored.sortMode || defaults.sortMode || 'updated',
       analysisLimit: Math.min(3, Math.max(1, Number(stored.analysisLimit || defaults.analysisLimit || 3))),
       locked: Boolean(defaults.locked || stored.locked)
