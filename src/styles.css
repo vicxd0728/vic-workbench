@@ -650,7 +650,7 @@ a {
 
 .commandDashboard {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .statusStrip {
@@ -945,7 +945,9 @@ a {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background:
+    linear-gradient(180deg, rgba(15, 27, 48, 0.92), rgba(8, 18, 34, 0.86)),
+    radial-gradient(circle at 18% 0%, rgba(56, 189, 248, 0.11), transparent 34%);
   box-shadow: var(--shadow-soft);
 }
 
@@ -1000,6 +1002,137 @@ a {
 .dashboardPanelHeader button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.sourceSectionHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.sourceSectionHeader div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sourceSectionHeader h3 {
+  margin: 0;
+  color: #f8fbff;
+  font-size: 15px;
+}
+
+.sourceSectionHeader span {
+  color: #9fb2cc;
+  font-size: 12px;
+}
+
+.sourceSectionHeader button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid rgba(125, 166, 217, 0.22);
+  border-radius: 8px;
+  background: rgba(6, 15, 28, 0.48);
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.serviceHealthPanel {
+  position: sticky;
+  top: 92px;
+  min-height: 0;
+}
+
+.serviceHealthList {
+  display: grid;
+  gap: 8px;
+}
+
+.serviceHealthList a,
+.serviceHealthList button {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 54px;
+  padding: 10px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 8px;
+  background: rgba(6, 15, 28, 0.38);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.serviceHealthList a:hover,
+.serviceHealthList button:hover {
+  border-color: rgba(125, 211, 252, 0.42);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.serviceDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0 4px rgba(100, 116, 139, 0.12);
+}
+
+.serviceDot.online {
+  background: #34d399;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+}
+
+.serviceDot.muted {
+  background: #fbbf24;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.12);
+}
+
+.serviceHealthList div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.serviceHealthList strong,
+.serviceHealthList small,
+.serviceHealthList em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serviceHealthList strong {
+  color: #f8fbff;
+  font-size: 13px;
+}
+
+.serviceHealthList small {
+  color: #9fb2cc;
+  font-size: 12px;
+}
+
+.serviceHealthList em {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(52, 211, 153, 0.1);
+  color: #86efac;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.serviceDeviceRow em {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fde68a;
 }
 
 .updateTable,
@@ -1078,19 +1211,23 @@ a {
 
 .sourceOverviewGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 10px;
+  background: transparent;
+  border-color: transparent;
 }
 
 .sourceOverviewCard {
   display: grid;
   gap: 10px;
   align-content: start;
-  min-height: 170px;
+  min-height: 154px;
   padding: 14px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
-  background: var(--surface-2);
+  background:
+    linear-gradient(180deg, rgba(12, 28, 52, 0.92), rgba(6, 15, 28, 0.72)),
+    radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.12), transparent 34%);
   text-align: left;
 }
 
@@ -4361,6 +4498,7 @@ body {
   }
 
   .statusStrip,
+  .dashboardFocusTabs,
   .priorityBoard,
   .priorityCards,
   .attentionPanel,
@@ -4372,6 +4510,49 @@ body {
   .erpRows,
   .quickPowerGrid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboardFocusTabs {
+    width: 100%;
+  }
+
+  .dashboardFocusTabs button {
+    min-width: 0;
+  }
+
+  .priorityCard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .priorityCard em {
+    justify-self: start;
+  }
+
+  .sourceSectionHeader,
+  .dashboardPanelHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sourceSectionHeader button,
+  .dashboardPanelHeader button {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .serviceHealthPanel {
+    position: static;
+  }
+
+  .serviceHealthList a,
+  .serviceHealthList button {
+    grid-template-columns: 10px minmax(0, 1fr);
+  }
+
+  .serviceHealthList em {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .linkHubHero,

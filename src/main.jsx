@@ -870,7 +870,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const aiSummaryHighlights = aiSummaryItem?.highlights?.length ? aiSummaryItem.highlights : splitSummaryHighlights(aiSummaryItem?.summary || '');
   const liveSummaryHighlights = buildActionableSummary(notionData.allLiveItems, 5);
   const shouldUseLiveSummary = Boolean((notionData.aiSummaryIsStale || notionData.aiSummaryNeedsSource) && liveSummaryHighlights.length);
-  const displayedSummaryTitle = shouldUseLiveSummary ? '即時總覽摘要' : (aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常'));
+  const displayedSummaryTitle = shouldUseLiveSummary ? '即時重點整理' : (aiSummaryItem?.title || (notionData.aiSummary?.status === 'loading' ? '正在讀取摘要頁' : '摘要頁讀取異常'));
   const displayedSummaryHighlights = shouldUseLiveSummary ? liveSummaryHighlights : aiSummaryHighlights;
   const updateAlerts = notionData.updateAlerts || [];
   const [deviceStatus, setDeviceStatus] = useState({ status: 'loading', data: null });
@@ -915,7 +915,10 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       status: source.status,
       message: source.message,
       hasUpdate: source.hasUpdate,
-      highlights: highlights.slice(0, 3)
+      highlights: highlights.slice(0, 3),
+      displayMessage: source.status === 'error'
+        ? '來源讀取失敗，請到資料來源檢查連結、權限或 Token。'
+        : source.message
     };
   });
   const attentionItems = [
@@ -960,6 +963,17 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       onClick: () => setFocusTab('news')
     }
   ];
+  const serviceHealthCards = deploymentLinks
+    .filter((item) => item.primary)
+    .slice(0, 5)
+    .map((item) => ({
+      ...item,
+      status: '正常',
+      detail: item.group
+    }));
+  const deviceOnline = Boolean(deviceStatus.data?.online);
+  const serviceNormalCount = serviceHealthCards.length + (deviceOnline ? 1 : 0);
+  const serviceTotalCount = serviceHealthCards.length + 1;
   const focusTabs = [
     { id: 'overview', label: '重點' },
     { id: 'erp', label: 'ERP' },
@@ -1001,7 +1015,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
         <div><BookOpen size={18} /><span>Notion</span><strong>{notionData.allLiveItems.length ? '已同步' : '讀取中'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '等待資料'}</small></div>
         <div><BarChart3 size={18} /><span>ERP</span><strong>{erpData ? `${erpData.totalPending} 待處理` : '讀取中'}</strong><small>{erpData ? `逾期 ${erpData.overdue || 0} / 庫存 ${erpData.stockWarning || 0}` : '等待資料'}</small></div>
         <div><Sparkles size={18} /><span>最新來源</span><strong>{newestSource?.label || '等待資料'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '尚未同步'}</small></div>
-        <div><Inbox size={18} /><span>待整理</span><strong>{queueCount} 筆</strong></div>
+        <div><Wifi size={18} /><span>服務狀態</span><strong>{serviceNormalCount}/{serviceTotalCount} 正常</strong><small>{deviceOnline ? '本機代理在線' : '本機代理待回報'}</small></div>
       </div>
 
       <div className="dashboardFocusTabs" role="tablist" aria-label="總攬焦點">
@@ -1032,8 +1046,8 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       <div className={`dashboardLayout focus-${focusTab}`}>
         {showNotion && <section className="dashboardMainPanel">
           <div className="dashboardPanelHeader">
-            <div><h2>各來源重點</h2><span>每個資料庫或父頁只佔一格，避免單一來源洗版</span></div>
-            <button onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新整理</button>
+            <div><h2>即時重點整理</h2><span>首頁先看整理後的重點；資料來源明細放在下方</span></div>
+            <button onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新抓取來源</button>
           </div>
           {updateAlerts.length > 0 && (
             <div className="sourceUpdateNotice">
@@ -1060,7 +1074,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
               className={`aiSummaryCard ${notionData.aiSummary?.status || ''}`}
             >
               <div className="aiSummaryHead">
-                <span><Sparkles size={16} /> AI 總覽摘要</span>
+                <span><Sparkles size={16} /> 即時重點整理</span>
                 <small>
                   {shouldUseLiveSummary
                     ? `已套用最新來源 · ${newestItem?.lastEditedTime ? formatKnowledgeTime(newestItem.lastEditedTime) : '剛剛'}`
@@ -1082,11 +1096,18 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                 <p>{notionData.aiSummary?.message || '請在 Notion AI 摘要頁放入今日重點、風險與下一步。'}</p>
               )}
               <div className="aiSummaryActions">
-                <button type="button" onClick={() => notionData.refreshAll()}><RotateCcw size={15} />用最新資料更新畫面</button>
+                <button type="button" onClick={() => notionData.refreshAll()}><RotateCcw size={15} />重新抓取來源</button>
                 {aiSummaryItem?.url && <a href={aiSummaryItem.url} target="_blank" rel="noreferrer"><ExternalLink size={15} />開啟 Notion 摘要頁</a>}
               </div>
             </div>
           )}
+          <div className="sourceSectionHeader">
+            <div>
+              <h3>各來源最新</h3>
+              <span>每個資料庫或父頁只佔一格，避免單一來源洗版</span>
+            </div>
+            <button type="button" onClick={() => setActiveView('knowledge')}>管理資料來源 <ChevronRight size={15} /></button>
+          </div>
           <div className="sourceOverviewGrid">
             {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (
               <a className="sourceOverviewCard" href={source.href || undefined} target={source.href ? '_blank' : undefined} rel={source.href ? 'noreferrer' : undefined} key={source.id} onClick={(event) => {
@@ -1098,7 +1119,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                 <div className="sourceOverviewTop">
                   <span>{source.hasUpdate ? '有新資料' : `${source.count} 頁`}</span>
                   <strong>{source.label}</strong>
-                  <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.message}</small>
+                  <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.displayMessage}</small>
                 </div>
                 {source.highlights.length > 0 ? (
                   <ul>{source.highlights.map((text) => <li key={text}>{text}</li>)}</ul>
@@ -1123,6 +1144,33 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
             )}
           </div>
         </section>}
+
+        {focusTab === 'overview' && <aside className="dashboardSidePanel serviceHealthPanel">
+          <div className="dashboardPanelHeader compact">
+            <div><h2>服務狀態</h2><span>常用系統入口與連線概況</span></div>
+            <button type="button" onClick={() => setActiveView('links')}>全部連結 <ChevronRight size={15} /></button>
+          </div>
+          <div className="serviceHealthList">
+            {serviceHealthCards.map((service) => (
+              <a href={service.url} target="_blank" rel="noreferrer" key={service.id}>
+                <span className="serviceDot online" />
+                <div>
+                  <strong>{service.label}</strong>
+                  <small>{service.detail}</small>
+                </div>
+                <em>{service.status}</em>
+              </a>
+            ))}
+            <button type="button" onClick={() => setFocusTab('device')} className="serviceDeviceRow">
+              <span className={`serviceDot ${deviceOnline ? 'online' : 'muted'}`} />
+              <div>
+                <strong>本機代理程式</strong>
+                <small>{deviceOnline ? '可接收遠端指令' : '等待狀態回報'}</small>
+              </div>
+              <em>{deviceOnline ? '正常' : '待確認'}</em>
+            </button>
+          </div>
+        </aside>}
 
         {showDevice && <aside className="dashboardSidePanel">
           <div className="dashboardPanelHeader compact">
