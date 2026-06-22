@@ -71,7 +71,8 @@ const captureTypes = [
   { id: 'task', label: '任務', icon: CheckSquare },
   { id: 'note', label: '筆記', icon: FileText },
   { id: 'idea', label: '靈感', icon: Sparkles },
-  { id: 'link', label: '連結', icon: Link2 }
+  { id: 'link', label: '連結', icon: Link2 },
+  { id: 'meeting', label: '會議', icon: Mic }
 ];
 
 const stageLabels = {
@@ -89,7 +90,8 @@ const typeLabels = {
   note: '筆記',
   idea: '靈感',
   link: '連結',
-  voice: '語音筆記'
+  meeting: '會議',
+  voice: '語音'
 };
 
 const initialTasks = [];
@@ -682,8 +684,8 @@ function App() {
     return { completed, open, syncQueue, progress };
   }, [notes, tasks]);
 
-  async function handleCapture() {
-    const title = draft.trim();
+  async function handleCapture(textOverride) {
+    const title = (typeof textOverride === 'string' ? textOverride : draft).trim();
     if (!title) return;
 
     setLastAction('正在寫入 Notion 收件匣...');
@@ -713,32 +715,6 @@ function App() {
       setDraft('');
       setLastAction('Notion 寫入失敗，已先保留本機暫存');
       setCaptureSync({ status: 'error', message: error.message || 'Notion 寫入失敗，已先保留本機暫存。' });
-    }
-  }
-
-  async function addVoiceNote(note) {
-    setLastAction('正在寫入語音筆記...');
-    setCaptureSync({ status: 'loading', message: '正在寫入語音筆記到 Notion...' });
-    try {
-      const content = [
-        note.transcript,
-        note.highlights?.length ? `\n\n重點：\n${note.highlights.map((item) => `- ${item}`).join('\n')}` : ''
-      ].join('').trim();
-      const savedNote = await createCaptureInNotion({
-        title: note.title,
-        type: 'voice',
-        content,
-        source: window.matchMedia('(display-mode: standalone)').matches ? '手機 App' : '桌面網頁'
-      });
-      setNotes((current) => [savedNote, ...current.filter((item) => item.id !== savedNote.id)]);
-      setLastAction('語音筆記已寫入 Notion');
-      setCaptureSync({ status: 'ready', message: '語音筆記已寫入 Notion 收件匣。' });
-      return true;
-    } catch (error) {
-      setNotes((current) => [note, ...current]);
-      setLastAction('語音筆記寫入失敗，已先保留本機暫存');
-      setCaptureSync({ status: 'error', message: error.message || '語音筆記寫入 Notion 失敗。' });
-      return false;
     }
   }
 
@@ -855,7 +831,6 @@ function App() {
           setDraft={setDraft}
           handleCapture={handleCapture}
           lastAction={lastAction}
-          addVoiceNote={addVoiceNote}
           toggleTask={toggleTask}
           moveTask={moveTask}
           deleteTask={deleteTask}
@@ -893,7 +868,6 @@ function ActiveView(props) {
     setDraft,
     handleCapture,
     lastAction,
-    addVoiceNote,
     toggleTask,
     moveTask,
     deleteTask,
@@ -928,7 +902,6 @@ function ActiveView(props) {
         <div className="primaryColumn">
           <PageHeader title="快速紀錄" subtitle="快速收集想法、語音逐字稿、待整理連結，之後再送到 Notion。" />
           <CapturePanel {...{ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction, captureSync, refreshCaptureInbox }} />
-          <VoiceNotePanel addVoiceNote={addVoiceNote} />
           <KnowledgePanel notes={notes} expanded updateNote={updateNote} deleteNote={deleteNote} captureSync={captureSync} refreshCaptureInbox={refreshCaptureInbox} />
         </div>
         <aside className="insightRail">
@@ -1478,51 +1451,17 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
 }
 
 function CapturePanel({ captureType, setCaptureType, draft, setDraft, handleCapture, lastAction, captureSync, refreshCaptureInbox }) {
-  return (
-    <section className="capturePanel">
-      <textarea
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') handleCapture();
-        }}
-        placeholder="快速輸入任務、筆記、連結或靈感。"
-      />
-      <div className="captureToolbar">
-        <div className="segmented">
-          {captureTypes.map(({ id, label, icon: Icon }) => (
-            <button className={captureType === id ? 'activeCapture' : ''} key={id} onClick={() => setCaptureType(id)}>
-              <Icon size={16} />{label}
-            </button>
-          ))}
-        </div>
-        <span className="statusHint">{lastAction}</span>
-        <button className="primaryAction" onClick={handleCapture}><Plus size={17} />新增</button>
-      </div>
-      <div className={`captureSyncState ${captureSync?.status || 'idle'}`}>
-        <div>
-          <strong>Notion 收件匣</strong>
-          <span>{captureSync?.message || '快速紀錄會統一寫入 Notion，兩邊開啟時自動同步。'}</span>
-        </div>
-        <button type="button" onClick={() => refreshCaptureInbox?.()}><RotateCcw size={15} />重新同步</button>
-      </div>
-    </section>
-  );
-}
-
-function VoiceNotePanel({ addVoiceNote }) {
   const recognitionRef = useRef(null);
   const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
   const [interimText, setInterimText] = useState('');
-  const [voiceStatus, setVoiceStatus] = useState('按下開始後，瀏覽器會詢問麥克風權限');
-  const keyPoints = useMemo(() => extractKeyPoints(transcript), [transcript]);
-  const isSupported = typeof window !== 'undefined' && Boolean(getSpeechRecognition());
+  const [voiceStatus, setVoiceStatus] = useState('可手動輸入、貼上文字，或使用語音轉文字。');
+  const isVoiceSupported = typeof window !== 'undefined' && Boolean(getSpeechRecognition());
+  const composedDraft = `${draft}${interimText ? `${draft ? ' ' : ''}${interimText}` : ''}`;
 
   function startListening() {
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
-      setVoiceStatus('這個瀏覽器不支援語音轉文字，建議使用 Chrome');
+      setVoiceStatus('這個瀏覽器不支援語音轉文字，建議使用 Chrome。');
       return;
     }
 
@@ -1533,7 +1472,7 @@ function VoiceNotePanel({ addVoiceNote }) {
 
     recognition.onstart = () => {
       setIsListening(true);
-      setVoiceStatus('正在聆聽，講完後可按停止');
+      setVoiceStatus('正在聆聽，停止後文字會保留在輸入框。');
     };
     recognition.onresult = (event) => {
       let finalText = '';
@@ -1543,7 +1482,9 @@ function VoiceNotePanel({ addVoiceNote }) {
         if (event.results[index].isFinal) finalText += text;
         else interim += text;
       }
-      if (finalText) setTranscript((current) => `${current}${current ? ' ' : ''}${finalText.trim()}`);
+      if (finalText) {
+        setDraft((current) => `${current}${current ? ' ' : ''}${finalText.trim()}`);
+      }
       setInterimText(interim.trim());
     };
     recognition.onerror = (event) => {
@@ -1553,51 +1494,48 @@ function VoiceNotePanel({ addVoiceNote }) {
     recognition.onend = () => {
       setIsListening(false);
       setInterimText('');
-      setVoiceStatus('已停止，可整理重點或存成筆記');
+      setVoiceStatus('已停止，可繼續編輯或直接新增。');
     };
 
     recognitionRef.current = recognition;
     recognition.start();
   }
 
-  async function saveVoiceNote() {
-    const content = transcript.trim();
-    if (!content) {
-      setVoiceStatus('目前沒有可儲存的轉文字內容');
-      return;
-    }
-    setVoiceStatus('正在寫入 Notion 收件匣...');
-    const ok = await addVoiceNote({
-      id: Date.now(),
-      title: keyPoints[0] || content.slice(0, 36),
-      type: 'voice',
-      time: '剛剛',
-      synced: false,
-      transcript: content,
-      highlights: keyPoints
-    });
-    setTranscript('');
-    setInterimText('');
-    setVoiceStatus(ok ? '已存成 Notion 語音重點筆記' : 'Notion 寫入失敗，已先保留本機暫存');
+  function stopListening() {
+    recognitionRef.current?.stop();
   }
 
   return (
-    <section className="panel voicePanel">
-      <div className="panelTitle"><h2>語音重點筆記 <small>{keyPoints.length}</small></h2><span>{isSupported ? 'Chrome 可用' : '需支援語音辨識'}</span></div>
-      <div className="voiceControls">
-        <button className={`recordButton ${isListening ? 'recording' : ''}`} onClick={isListening ? () => recognitionRef.current?.stop() : startListening}>
-          {isListening ? <Square size={18} /> : <Mic size={18} />}{isListening ? '停止錄音' : '開始錄音轉文字'}
+    <section className="capturePanel">
+      <textarea
+        value={composedDraft}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') handleCapture(composedDraft);
+        }}
+        placeholder="輸入、貼上文字，或按下語音轉文字後再整理。"
+      />
+      <div className="captureToolbar">
+        <div className="segmented">
+          {captureTypes.map(({ id, label, icon: Icon }) => (
+            <button className={captureType === id ? 'activeCapture' : ''} key={id} onClick={() => setCaptureType(id)}>
+              <Icon size={16} />{label}
+            </button>
+          ))}
+        </div>
+        <span className="statusHint">{lastAction}</span>
+        <button className={`voiceInlineButton ${isListening ? 'recording' : ''}`} type="button" onClick={isListening ? stopListening : startListening}>
+          {isListening ? <Square size={16} /> : <Mic size={16} />}{isListening ? '停止' : '語音'}
         </button>
-        <button className="secondaryAction" onClick={saveVoiceNote}><Wand2 size={17} />存成重點筆記</button>
+        <button className="primaryAction" onClick={() => handleCapture(composedDraft)}><Plus size={17} />新增</button>
       </div>
-      <div className="voiceStatus"><span className={isListening ? 'pulseDot' : ''} />{voiceStatus}</div>
-      <div className="transcriptBox">
-        <strong>逐字稿</strong>
-        <textarea value={`${transcript}${interimText ? `${transcript ? ' ' : ''}${interimText}` : ''}`} onChange={(event) => setTranscript(event.target.value)} placeholder="錄音後會在這裡顯示文字，也可以手動貼上會議內容再萃取重點。" />
-      </div>
-      <div className="keyPointBox">
-        <div><ListChecks size={17} /><strong>自動重點</strong></div>
-        {keyPoints.length > 0 ? <ul>{keyPoints.map((point) => <li key={point}>{point}</li>)}</ul> : <p>有逐字稿後，這裡會自動抓出 3 到 5 個重點。</p>}
+      <div className="captureVoiceHint"><span className={isListening ? 'pulseDot' : ''} />{isVoiceSupported ? voiceStatus : '此瀏覽器不支援語音轉文字，可直接貼上文字。'}</div>
+      <div className={`captureSyncState ${captureSync?.status || 'idle'}`}>
+        <div>
+          <strong>Notion 收件匣</strong>
+          <span>{captureSync?.message || '快速紀錄會統一寫入 Notion，兩邊開啟時自動同步。'}</span>
+        </div>
+        <button type="button" onClick={() => refreshCaptureInbox?.()}><RotateCcw size={15} />重新同步</button>
       </div>
     </section>
   );

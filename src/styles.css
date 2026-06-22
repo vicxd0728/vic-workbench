@@ -2015,7 +2015,7 @@ a {
 .captureToolbar {
   min-height: 58px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 14px;
   padding: 10px 14px;
@@ -2047,6 +2047,40 @@ a {
 .statusHint {
   color: var(--muted);
   font-size: 13px;
+}
+
+.voiceInlineButton {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid rgba(125, 166, 217, 0.22);
+  border-radius: 9px;
+  color: #d8e8ff;
+  background: rgba(10, 24, 42, 0.64);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.voiceInlineButton.recording {
+  border-color: rgba(248, 113, 113, 0.42);
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.3);
+}
+
+.captureVoiceHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 14px 12px;
+  padding: 9px 11px;
+  border: 1px solid rgba(125, 166, 217, 0.14);
+  border-radius: 8px;
+  color: #9fb2cc;
+  background: rgba(6, 15, 28, 0.26);
+  font-size: 12px;
 }
 
 .captureSyncState {
@@ -5005,6 +5039,20 @@ body {
   .inboxRow {
     grid-template-columns: 1fr;
     gap: 5px;
+  }
+
+  .captureToolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .captureToolbar .statusHint {
+    order: 3;
+  }
+
+  .voiceInlineButton,
+  .captureToolbar .primaryAction {
+    width: 100%;
   }
 
   .inboxRow span {

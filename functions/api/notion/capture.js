@@ -22,6 +22,7 @@ const typeMap = {
   note: 'Note',
   idea: 'Idea',
   link: 'Link',
+  meeting: 'Meeting',
   voice: 'Voice Note'
 };
 
