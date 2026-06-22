@@ -53,7 +53,8 @@ const storageKeys = {
   projects: 'vic-workbench:v6:projects',
   captureType: 'vic-workbench:v6:capture-type',
   activeView: 'vic-workbench:v6:active-view',
-  notionConfig: 'vic-workbench:v6:notion-config'
+  notionConfig: 'vic-workbench:v6:notion-config',
+  appearance: 'vic-workbench:v6:appearance'
 };
 
 const navItems = [
@@ -96,6 +97,37 @@ const initialTasks = [];
 const initialNotes = [];
 
 const initialProjects = [];
+
+const defaultAppearance = {
+  fontFamily: 'tech',
+  textScale: 'large',
+  layoutDensity: 'balanced',
+  panelStyle: 'glass'
+};
+
+const appearanceOptions = {
+  fontFamily: [
+    { id: 'tech', label: '科技感', description: '俐落、乾淨，適合儀表板長時間閱讀。' },
+    { id: 'human', label: '柔和現代', description: '中文較圓潤，筆記和摘要閱讀感更舒服。' },
+    { id: 'serif', label: '報告感', description: '適合市場情報、週報、長摘要。' },
+    { id: 'mono', label: '工程感', description: '數字和狀態辨識清楚，偏控制台風格。' }
+  ],
+  textScale: [
+    { id: 'compact', label: '精簡', description: '同畫面容納更多資料。' },
+    { id: 'standard', label: '標準', description: '目前建議值，資訊密度和可讀性平衡。' },
+    { id: 'large', label: '舒適', description: '手機和長時間閱讀更輕鬆。' }
+  ],
+  layoutDensity: [
+    { id: 'compact', label: '高密度', description: '適合桌機快速掃描大量來源。' },
+    { id: 'balanced', label: '平衡', description: '首頁、資料來源、設定都維持清楚層級。' },
+    { id: 'spacious', label: '寬鬆', description: '間距更大，視覺更沉穩。' }
+  ],
+  panelStyle: [
+    { id: 'glass', label: '科技玻璃', description: '目前主風格，深色透明面板。' },
+    { id: 'solid', label: '穩重實色', description: '降低透明感，文字更穩。' },
+    { id: 'neon', label: '未來霓虹', description: '強化藍綠邊線與光暈。' }
+  ]
+};
 
 const deploymentLinks = [
   {
@@ -461,6 +493,7 @@ function App() {
   const [tasks, setTasks] = usePersistentState(storageKeys.tasks, initialTasks);
   const [notes, setNotes] = usePersistentState(storageKeys.notes, initialNotes);
   const [projects, setProjects] = usePersistentState(storageKeys.projects, initialProjects);
+  const [appearance, setAppearance] = usePersistentState(storageKeys.appearance, defaultAppearance);
   const [notionConfig, setNotionConfig] = usePersistentState(storageKeys.notionConfig, {
     workspaceUrl: '',
     token: '',
@@ -611,7 +644,7 @@ function App() {
   }
 
   function exportData() {
-    const payload = JSON.stringify({ tasks, notes, projects, notionConfig }, null, 2);
+    const payload = JSON.stringify({ tasks, notes, projects, notionConfig, appearance }, null, 2);
     const blob = new Blob([payload], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -622,8 +655,15 @@ function App() {
     setLastAction('已匯出 JSON');
   }
 
+  const appearanceClass = [
+    `font-${appearance.fontFamily || defaultAppearance.fontFamily}`,
+    `text-${appearance.textScale || defaultAppearance.textScale}`,
+    `density-${appearance.layoutDensity || defaultAppearance.layoutDensity}`,
+    `panel-${appearance.panelStyle || defaultAppearance.panelStyle}`
+  ].join(' ');
+
   return (
-    <div className="workspace">
+    <div className={`workspace ${appearanceClass}`}>
       <Sidebar activeView={activeView} setActiveView={setActiveView} notes={notes} tasks={tasks} />
       <main className="mainShell">
         <Topbar searchTerm={searchTerm} setSearchTerm={setSearchTerm} exportData={exportData} />
@@ -636,6 +676,8 @@ function App() {
           projects={projects}
           setProjects={setProjects}
           notionConfig={notionConfig}
+          appearance={appearance}
+          setAppearance={setAppearance}
           notionData={notionData}
           setNotionConfig={setNotionConfig}
           captureType={captureType}
@@ -668,6 +710,8 @@ function ActiveView(props) {
     projects,
     setProjects,
     notionConfig,
+    appearance,
+    setAppearance,
     notionData,
     setNotionConfig,
     captureType,
@@ -769,8 +813,14 @@ function ActiveView(props) {
       <section className="contentGrid singlePage commandPage">
         <div className="primaryColumn">
           <PageHeader title="系統設定" subtitle="資料來源、AI 彙整、遠端電腦、安全性與部署狀態分層管理。" />
+          <SettingsWorkspace
+            notionConfig={notionConfig}
+            setNotionConfig={setNotionConfig}
+            appearance={appearance}
+            setAppearance={setAppearance}
+            resetDemoData={resetDemoData}
+          />
           <RemotePowerPanel />
-          <SettingsWorkspace notionConfig={notionConfig} setNotionConfig={setNotionConfig} resetDemoData={resetDemoData} />
         </div>
       </section>
     );
@@ -1914,7 +1964,7 @@ function NewsWorkspace({ newsState }) {
   );
 }
 
-function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
+function SettingsWorkspace({ notionConfig, setNotionConfig, appearance, setAppearance, resetDemoData }) {
   const pwaInstall = usePwaInstall();
   const databaseConfig = normalizeNotionDatabaseConfigs(notionConfig);
   const configuredDatabases = Object.values(databaseConfig);
@@ -1974,6 +2024,10 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
 
   function updateConfig(field, value) {
     setNotionConfig((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateAppearance(field, value) {
+    setAppearance((current) => ({ ...defaultAppearance, ...current, [field]: value }));
   }
 
   function updateDatabaseConfig(databaseId, field, value) {
@@ -2098,6 +2152,7 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
       <div className="settingsTabs settingsTabsWide" role="tablist" aria-label="系統設定">
         {[
           ['sources', '資料來源', `${connectedSources}/${configuredDatabases.length} 已設定`],
+          ['appearance', '外觀', appearanceOptions.textScale.find((item) => item.id === (appearance.textScale || defaultAppearance.textScale))?.label || '舒適'],
           ['ai', 'AI 彙整', notionConfig.aiSummaryPageUrl ? '已設定摘要頁' : '設定摘要頁'],
           ['device', '遠端電腦', '狀態與電源'],
           ['security', '安全性', tokenStatusLabel],
@@ -2167,6 +2222,30 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
               </div>
               {!activeSource.locked && <button className="dangerButton" onClick={() => deleteCustomDatabase(activeSource.id)}><Trash2 size={15} />刪除這個來源</button>}
             </article>
+          </div>
+        </div>
+      )}
+
+      {activeSettingsTab === 'appearance' && (
+        <div className="settingsPanel">
+          <div className="appearancePreview">
+            <div>
+              <span>即時預覽</span>
+              <strong>今天先看重點，細節再進分頁</strong>
+              <p>這裡會跟著字體、字級、版面密度和面板質感一起變化。預設已調大，手機類 App 會更好讀。</p>
+            </div>
+            <div className="appearancePreviewCard">
+              <small>Notion</small>
+              <b>即時重點整理</b>
+              <em>來源更新後自動提醒</em>
+            </div>
+          </div>
+          <AppearanceOptionGroup title="字體風格" field="fontFamily" value={appearance.fontFamily || defaultAppearance.fontFamily} options={appearanceOptions.fontFamily} onChange={updateAppearance} />
+          <AppearanceOptionGroup title="字級大小" field="textScale" value={appearance.textScale || defaultAppearance.textScale} options={appearanceOptions.textScale} onChange={updateAppearance} />
+          <AppearanceOptionGroup title="版面密度" field="layoutDensity" value={appearance.layoutDensity || defaultAppearance.layoutDensity} options={appearanceOptions.layoutDensity} onChange={updateAppearance} />
+          <AppearanceOptionGroup title="面板質感" field="panelStyle" value={appearance.panelStyle || defaultAppearance.panelStyle} options={appearanceOptions.panelStyle} onChange={updateAppearance} />
+          <div className="settingsActions">
+            <button className="secondaryAction" type="button" onClick={() => setAppearance(defaultAppearance)}><RotateCcw size={17} /><span>恢復預設外觀</span></button>
           </div>
         </div>
       )}
@@ -2249,6 +2328,32 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, resetDemoData }) {
   );
 }
 
+function AppearanceOptionGroup({ title, field, value, options, onChange }) {
+  return (
+    <section className="appearanceOptionGroup">
+      <div className="settingsSectionHeader">
+        <div>
+          <strong>{title}</strong>
+          <small>點選後立即套用</small>
+        </div>
+      </div>
+      <div className="appearanceChoiceGrid">
+        {options.map((option) => (
+          <button
+            type="button"
+            className={value === option.id ? 'activeAppearanceChoice' : ''}
+            key={option.id}
+            onClick={() => onChange(field, option.id)}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.description}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function RemotePowerPanel() {
   const deviceId = 'vic-windows-pc';
   const [status, setStatus] = useState({ status: 'loading', data: null, message: '' });
@@ -2295,7 +2400,10 @@ function RemotePowerPanel() {
       if (!response.ok || !data.ok) throw new Error(data.message || '讀取電腦狀態失敗。');
       setStatus({ status: 'ready', data, message: '' });
     } catch (error) {
-      setStatus({ status: 'error', data: null, message: error.message || '讀取電腦狀態失敗。' });
+      const message = error.message?.includes('Unexpected token')
+        ? '遠端電腦 API 尚未連線或代理程式未回報，請確認本機代理程式正在執行。'
+        : error.message || '讀取電腦狀態失敗。';
+      setStatus({ status: 'error', data: null, message });
     }
   }
 
