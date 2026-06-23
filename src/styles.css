@@ -3170,6 +3170,231 @@ a {
   gap: 14px;
 }
 
+.aiSettingsHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(20, 184, 166, 0.08)),
+    rgba(6, 15, 28, 0.5);
+}
+
+.aiSettingsHero div {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.aiSettingsHero span {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.aiSettingsHero strong {
+  color: #f8fbff;
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.aiSettingsHero p {
+  max-width: 760px;
+  margin: 0;
+  color: #9fb2cc;
+  line-height: 1.65;
+}
+
+.aiSettingsHero a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  border-radius: 9px;
+  color: #dff6ff;
+  background: rgba(56, 189, 248, 0.1);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.aiSettingsHero .disabledLink {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.aiSummaryControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 0.55fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.aiSummaryControl label {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.38);
+}
+
+.aiSummaryControl label span {
+  color: #9fb2cc;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.aiSummaryControl input {
+  min-height: 42px;
+  border: 1px solid rgba(125, 166, 217, 0.22);
+  border-radius: 9px;
+  color: #f8fbff;
+  background: rgba(2, 8, 23, 0.55);
+  padding: 0 12px;
+}
+
+.aiSummaryStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.aiSummaryStats div {
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  min-height: 84px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(15, 27, 48, 0.72);
+}
+
+.aiSummaryStats strong {
+  color: #7dd3fc;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.aiSummaryStats span {
+  color: #9fb2cc;
+  font-size: 12px;
+}
+
+.summaryFlow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summaryFlow article,
+.sourceInclusionPanel {
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(6, 15, 28, 0.38);
+}
+
+.summaryFlow article {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-content: start;
+  padding: 14px;
+}
+
+.summaryFlow span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #7dd3fc;
+  font-weight: 850;
+}
+
+.summaryFlow strong {
+  color: #f8fbff;
+  font-size: 14px;
+}
+
+.summaryFlow p {
+  margin: 0;
+  color: #9fb2cc;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sourceInclusionPanel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.summarySourceList {
+  display: grid;
+  gap: 8px;
+}
+
+.summarySourceItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 12px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 9px;
+  background: rgba(15, 27, 48, 0.62);
+}
+
+.summarySourceItem strong,
+.summarySourceItem span,
+.summarySourceItem p {
+  min-width: 0;
+}
+
+.summarySourceItem strong {
+  color: #f8fbff;
+  font-size: 14px;
+}
+
+.summarySourceItem span,
+.summarySourceItem p {
+  color: #9fb2cc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.summarySourceItem p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.summarySourceItem em {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(125, 166, 217, 0.12);
+  color: #c7d7ee;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.summarySourceItem.ready em {
+  background: rgba(52, 211, 153, 0.12);
+  color: #86efac;
+}
+
+.summarySourceItem.error em {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fde68a;
+}
+
 .appearancePreview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
@@ -5819,6 +6044,10 @@ body {
 
   .notionSetup,
   .connectionGuide,
+  .aiSettingsHero,
+  .aiSummaryControl,
+  .aiSummaryStats,
+  .summaryFlow,
   .calendarHero,
   .calendarOverview,
   .calendarCreateForm,

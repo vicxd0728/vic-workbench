@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Clock3,
   Command,
+  Database,
   Download,
   ExternalLink,
   FileText,
@@ -2395,6 +2396,9 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, appearance, setAppea
   const activeSource = configuredDatabases.find((item) => item.id === activeSourceId) || configuredDatabases[0];
   const connectedSources = configuredDatabases.filter((item) => item.databaseId || item.pageUrl).length;
   const successfulRuns = Object.values(sourceRuns).filter((item) => item.status === 'ready').length;
+  const configuredAiSources = configuredDatabases.filter((item) => item.databaseId || item.pageUrl);
+  const aiReadySources = configuredAiSources.filter((item) => sourceRuns[item.id]?.status === 'ready');
+  const aiErrorSources = configuredAiSources.filter((item) => sourceRuns[item.id]?.status === 'error');
   const activeRun = activeSource ? sourceRuns[activeSource.id] : null;
   const activeHasSource = activeSource
     ? activeSource.sourceType === 'folder'
@@ -2670,37 +2674,65 @@ function SettingsWorkspace({ notionConfig, setNotionConfig, appearance, setAppea
 
       {activeSettingsTab === 'ai' && (
         <div className="settingsPanel">
-          <div className="notionSetup focused aiSummarySetup">
+          <div className="aiSettingsHero">
+            <div>
+              <span>摘要設定</span>
+              <strong>首頁讀這一頁當總覽摘要</strong>
+              <p>資料來源負責讀原始 Notion；摘要頁負責放整理後的重點。首頁會優先顯示摘要頁，來源有新資料時再提醒你更新摘要。</p>
+            </div>
+            <a href={notionConfig.aiSummaryPageUrl || undefined} target="_blank" rel="noreferrer" className={!notionConfig.aiSummaryPageUrl ? 'disabledLink' : ''}>
+              <ExternalLink size={16} />
+              開啟摘要頁
+            </a>
+          </div>
+
+          <div className="aiSummaryControl">
             <label>
-              <span>Notion AI 摘要頁連結</span>
+              <span>摘要頁連結</span>
               <input
                 value={notionConfig.aiSummaryPageUrl || ''}
                 onChange={(event) => updateConfig('aiSummaryPageUrl', event.target.value)}
-                placeholder="貼上 Notion AI 整理後的摘要頁連結"
+                placeholder="貼上 Vic Workbench AI 摘要頁連結"
               />
             </label>
-            <p>做法：在 Notion 用 AI 或代理程式整理多個來源，寫入這個專用頁。首頁會優先讀這頁；原始資料仍放在「資料來源」分頁。</p>
+            <div className="aiSummaryStats">
+              <div><strong>{configuredAiSources.length}</strong><span>已設定來源</span></div>
+              <div><strong>{aiReadySources.length}</strong><span>已讀取成功</span></div>
+              <div><strong>{aiErrorSources.length}</strong><span>需要檢查</span></div>
+            </div>
           </div>
-          <div className="settingsInfoGrid">
-            <article><Wand2 size={18} /><strong>目前模式</strong><p>首頁先顯示 Notion AI 摘要頁，讓總覽更像決策看板，而不是原始資料清單。</p></article>
-            <article><Sparkles size={18} /><strong>Notion AI</strong><p>Notion AI 目前由 Notion 內部操作與寫入摘要頁；Vic Workbench 負責讀取結果。</p></article>
-            <article><ShieldAlert size={18} /><strong>成本控制</strong><p>不使用 OpenAI API 也不把模型金鑰放前端；成本由你的 Notion AI 方案承擔。</p></article>
+
+          <div className="summaryFlow">
+            <article><span>1</span><strong>資料來源</strong><p>在「資料來源」貼 Notion database 或父頁連結，確認可讀取。</p></article>
+            <article><span>2</span><strong>摘要頁</strong><p>在 Notion 用 AI 或手動把重點整理到 Vic Workbench AI 摘要頁。</p></article>
+            <article><span>3</span><strong>首頁總覽</strong><p>首頁讀摘要頁；若來源更新比摘要頁新，就提醒你摘要可能需要重整。</p></article>
           </div>
-          <div className="resultGrid">
-            {configuredDatabases.map((config) => {
+
+          <div className="sourceInclusionPanel">
+            <div className="settingsSectionHeader">
+              <div>
+                <strong>納入摘要的來源</strong>
+                <small>這裡只顯示狀態；要修改連結請回「資料來源」。</small>
+              </div>
+              <button className="secondaryAction" type="button" onClick={() => setActiveSettingsTab('sources')}><Database size={16} /><span>管理來源</span></button>
+            </div>
+            <div className="summarySourceList">
+              {configuredAiSources.map((config) => {
               const runState = sourceRuns[config.id];
+                const stateLabel = runState?.status === 'ready' ? '已讀取' : runState?.status === 'error' ? '需檢查' : '待讀取';
               return (
-                <article className={`resultCard ${runState?.status || ''}`} key={config.id}>
-                  <div className="resultCardTitle"><strong>{config.label}</strong><span>{runState?.status === 'ready' ? '可彙整' : runState?.status === 'error' ? '需修正' : '未測試'}</span></div>
-                  <p>{runState?.message || '先在資料來源讀取成功後，AI 彙整會使用這個來源。'}</p>
-                  {runState?.summaries?.length > 0 && (
-                    <div className="sourcePreviewList">
-                      {runState.summaries.map((item) => <a href={item.url} target="_blank" rel="noreferrer" key={item.id || item.title}><strong>{item.title}</strong><span>{item.summary}</span></a>)}
+                  <article className={`summarySourceItem ${runState?.status || 'idle'}`} key={config.id}>
+                    <div>
+                      <strong>{config.label}</strong>
+                      <span>{config.sourceType === 'folder' ? '父頁資料夾' : 'Database'} · {config.analysisLimit || 1} 頁</span>
                     </div>
-                  )}
+                    <em>{stateLabel}</em>
+                    <p>{runState?.message || '來源已設定，等待讀取確認。'}</p>
                 </article>
               );
             })}
+              {!configuredAiSources.length && <div className="emptyState">尚未設定資料來源。</div>}
+            </div>
           </div>
         </div>
       )}
