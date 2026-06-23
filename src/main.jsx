@@ -417,13 +417,34 @@ function usePersistentState(key, fallbackValue) {
 
 const retiredWorkbenchNotionIds = new Set([
   '6ba5f30036de43d7b64b4b1d2d91c0b5',
-  'e19ee4a9a1fb40d5aadef487a3d07356'
+  'e19ee4a9a1fb40d5aadef487a3d07356',
+  '387ff6f424bb8196a0d7db4b72427a0b',
+  '387ff6f424bb8192ac4ef6b7e8791a1a'
 ]);
 
+function extractCompactNotionId(value = '') {
+  const compact = String(value).replace(/-/g, '');
+  return compact.match(/([a-f0-9]{32})(?:[?#/]|$)/i)?.[1] || compact;
+}
+
+function isRetiredWorkbenchNotionValue(value = '') {
+  return retiredWorkbenchNotionIds.has(extractCompactNotionId(value));
+}
+
 function migrateWorkbenchNotionConfig(config = {}) {
-  const captureId = retiredWorkbenchNotionIds.has(config.captureDatabaseId) ? '' : config.captureDatabaseId;
-  const meetingId = retiredWorkbenchNotionIds.has(config.meetingDatabaseId) ? '' : config.meetingDatabaseId;
-  return { ...config, captureDatabaseId: captureId, meetingDatabaseId: meetingId };
+  const captureId = isRetiredWorkbenchNotionValue(config.captureDatabaseId) ? '' : config.captureDatabaseId;
+  const meetingId = isRetiredWorkbenchNotionValue(config.meetingDatabaseId) ? '' : config.meetingDatabaseId;
+  const captureUrl = isRetiredWorkbenchNotionValue(config.captureDatabaseUrl) ? '' : config.captureDatabaseUrl;
+  const meetingUrl = isRetiredWorkbenchNotionValue(config.meetingDatabaseUrl) ? '' : config.meetingDatabaseUrl;
+  const databases = { ...(config.databases || {}) };
+
+  ['tasks', 'meetings'].forEach((id) => {
+    if (isRetiredWorkbenchNotionValue(databases[id]?.databaseId || databases[id]?.pageUrl || '')) {
+      databases[id] = defaultNotionDatabaseConfig[id];
+    }
+  });
+
+  return { ...config, captureDatabaseId: captureId, captureDatabaseUrl: captureUrl, meetingDatabaseId: meetingId, meetingDatabaseUrl: meetingUrl, databases };
 }
 
 function sanitizeSyncedNotionConfig(config = {}) {
@@ -455,6 +476,7 @@ function mergeSyncedNotionConfig(remoteConfig = {}, localConfig = {}) {
   const databases = { ...(remote.databases || {}) };
 
   Object.entries(local.databases || {}).forEach(([id, source]) => {
+    if (id === 'tasks' || id === 'meetings') return;
     if (source.databaseId || source.pageUrl) {
       databases[id] = {
         ...(databases[id] || {}),
