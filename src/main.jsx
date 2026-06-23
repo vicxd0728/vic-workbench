@@ -1161,13 +1161,18 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       href: latest?.url || source.pageUrl || source.databaseId || '',
       status: source.status,
       message: source.message,
+      isError: source.status === 'error',
       hasUpdate: source.hasUpdate,
       highlights: highlights.slice(0, 3),
       displayMessage: source.status === 'error'
-        ? '來源讀取失敗，請到資料來源檢查連結、權限或 Token。'
+        ? '讀取失敗，已移到資料來源頁檢查。'
         : source.message
     };
   });
+  const sourceProblemCards = sourceDigestCards.filter((source) => source.isError);
+  const sourceCardsForView = focusTab === 'notion'
+    ? sourceDigestCards
+    : sourceDigestCards.filter((source) => !source.isError).slice(0, 6);
   const attentionItems = [
     updateAlerts.length > 0
       ? { level: 'warning', label: '資料來源有更新', value: `${updateAlerts.length} 個來源`, detail: `${updateAlerts[0].label} · ${formatKnowledgeTime(updateAlerts[0].latest.lastEditedTime)}` }
@@ -1241,6 +1246,13 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const showNews = focusTab === 'news';
   const showDevice = focusTab === 'device';
   const showErp = focusTab === 'overview' || focusTab === 'erp';
+  const briefHighlights = displayedSummaryHighlights.slice(0, 3);
+  const nextStepItems = [
+    erpData?.overdue > 0 ? `ERP 有 ${erpData.overdue} 件交期逾期，先確認可出貨與需改期項目。` : null,
+    erpData?.stockWarning > 0 ? `庫存警示 ${erpData.stockWarning} 件，建議先看低庫存品項。` : null,
+    updateAlerts.length ? `${updateAlerts[0].label} 有新資料，摘要可能需要更新。` : null,
+    nextCalendarEvent ? `下一個行程：${nextCalendarEvent.title}，${formatCalendarRange(nextCalendarEvent.start, nextCalendarEvent.end)}。` : null
+  ].filter(Boolean).slice(0, 4);
 
   useEffect(() => {
     let isMounted = true;
@@ -1281,6 +1293,18 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           </button>
         ))}
       </div>
+
+      <section className="dailyCommandBrief">
+        <div className="briefHero">
+          <span>今日中控</span>
+          <strong>{attentionItems.length ? '有訊號需要先看' : '目前沒有明顯警訊'}</strong>
+          <p>{briefHighlights[0] || newestItem?.summary || 'Notion、ERP、新聞與行事曆會在這裡整理成可快速判斷的重點。'}</p>
+        </div>
+        <div className="briefActionList">
+          <span>下一步</span>
+          {nextStepItems.length ? nextStepItems.map((item) => <p key={item}>{item}</p>) : <p>先從「即時重點整理」掃過，再進資料來源看細節。</p>}
+        </div>
+      </section>
 
       <section className="priorityBoard">
         <div className="priorityBoardTitle">
@@ -1359,14 +1383,21 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           )}
           <div className="sourceSectionHeader">
             <div>
-              <h3>各來源最新</h3>
-              <span>每個資料庫或父頁只佔一格，避免單一來源洗版</span>
+              <h3>{showNotionDetail ? '各來源狀態' : '各來源最新'}</h3>
+              <span>{showNotionDetail ? '完整顯示每個來源的讀取狀態與最新頁面' : '首頁只顯示可用來源；錯誤移到資料來源分頁處理'}</span>
             </div>
             <button type="button" onClick={() => setActiveView('knowledge')}>管理資料來源 <ChevronRight size={15} /></button>
           </div>
+          {!showNotionDetail && sourceProblemCards.length > 0 && (
+            <button type="button" className="sourceProblemNotice" onClick={() => setFocusTab('notion')}>
+              <ShieldAlert size={16} />
+              <span>{sourceProblemCards.length} 個來源需要檢查</span>
+              <small>點開 Notion 分頁看連結、權限或 Token</small>
+            </button>
+          )}
           <div className="sourceOverviewGrid">
-            {sourceDigestCards.length > 0 ? sourceDigestCards.map((source) => (
-              <a className="sourceOverviewCard" href={source.href || undefined} target={source.href ? '_blank' : undefined} rel={source.href ? 'noreferrer' : undefined} key={source.id} onClick={(event) => {
+            {sourceCardsForView.length > 0 ? sourceCardsForView.map((source) => (
+              <a className={`sourceOverviewCard ${source.isError ? 'sourceErrorCard' : ''}`} href={source.href || undefined} target={source.href ? '_blank' : undefined} rel={source.href ? 'noreferrer' : undefined} key={source.id} onClick={(event) => {
                 if (!source.href) {
                   event.preventDefault();
                   setActiveView('knowledge');
@@ -1377,7 +1408,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                   <strong>{source.label}</strong>
                   <small>{source.latest ? `${source.latest.title} · ${formatKnowledgeTime(source.latest.lastEditedTime)}` : source.displayMessage}</small>
                 </div>
-                {source.highlights.length > 0 ? (
+                {source.isError ? (
+                  <p>{source.displayMessage}</p>
+                ) : source.highlights.length > 0 ? (
                   <ul>{source.highlights.map((text) => <li key={text}>{text}</li>)}</ul>
                 ) : (
                   <p>{source.status === 'loading' ? '正在讀取最新資料...' : '尚未產生重點摘要。'}</p>
@@ -1566,6 +1599,13 @@ function CapturePanel({ captureType, setCaptureType, draft, setDraft, handleCapt
 
   return (
     <section className="capturePanel">
+      <div className="captureModeHeader">
+        <div>
+          <span>快速輸入</span>
+          <strong>文字、連結、語音與會議都先收進同一個 Notion 收件匣</strong>
+        </div>
+        <small>{captureTypes.find((type) => type.id === captureType)?.label || '筆記'}</small>
+      </div>
       <textarea
         value={composedDraft}
         onChange={(event) => setDraft(event.target.value)}
@@ -1588,7 +1628,7 @@ function CapturePanel({ captureType, setCaptureType, draft, setDraft, handleCapt
         </button>
         <button className="primaryAction" onClick={() => handleCapture(composedDraft)}><Plus size={17} />新增</button>
       </div>
-      <div className="captureVoiceHint"><span className={isListening ? 'pulseDot' : ''} />{isVoiceSupported ? voiceStatus : '此瀏覽器不支援語音轉文字，可直接貼上文字。'}</div>
+      <div className="captureVoiceHint"><span className={isListening ? 'pulseDot' : ''} />{isVoiceSupported ? voiceStatus : '此瀏覽器不支援語音轉文字，可直接貼上文字。'} 目前語音辨識不會自動分辨多人聲音。</div>
       <div className={`captureSyncState ${captureSync?.status || 'idle'}`}>
         <div>
           <strong>Notion 收件匣</strong>

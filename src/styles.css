@@ -797,7 +797,7 @@ a {
   gap: 2px 9px;
   align-content: center;
   padding: 9px 12px;
-  background: #fff;
+  background: rgba(8, 17, 32, 0.7);
 }
 
 .statusStrip svg {
@@ -819,7 +819,76 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #f8fbff;
   font-size: 14px;
+}
+
+.dailyCommandBrief {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.briefHero,
+.briefActionList {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(20, 184, 166, 0.08)),
+    rgba(8, 17, 32, 0.76);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.briefHero {
+  display: grid;
+  gap: 7px;
+}
+
+.briefHero span,
+.briefActionList span {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.briefHero strong {
+  color: #f8fbff;
+  font-size: clamp(20px, 2vw, 30px);
+  line-height: 1.15;
+}
+
+.briefHero p,
+.briefActionList p {
+  margin: 0;
+  color: #c7d7ee;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.briefActionList {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.briefActionList p {
+  position: relative;
+  padding-left: 14px;
+  font-size: 13px;
+}
+
+.briefActionList p::before {
+  position: absolute;
+  top: 0.78em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #34d399;
+  content: "";
 }
 
 .dashboardFocusTabs {
@@ -1344,6 +1413,35 @@ a {
   border-color: transparent;
 }
 
+.sourceProblemNotice {
+  display: grid;
+  grid-template-columns: 18px auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  border-radius: 8px;
+  background: rgba(251, 191, 36, 0.08);
+  color: #fde68a;
+  text-align: left;
+}
+
+.sourceProblemNotice span {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.sourceProblemNotice small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #c7d7ee;
+  font-size: 12px;
+}
+
 .sourceOverviewCard {
   display: grid;
   gap: 10px;
@@ -1359,8 +1457,16 @@ a {
 }
 
 .sourceOverviewCard:hover {
-  border-color: rgba(37, 99, 235, 0.28);
-  background: #fbfdff;
+  border-color: rgba(125, 211, 252, 0.4);
+  background:
+    linear-gradient(180deg, rgba(16, 35, 64, 0.94), rgba(7, 20, 36, 0.82)),
+    radial-gradient(circle at 100% 0%, rgba(56, 189, 248, 0.18), transparent 34%);
+}
+
+.sourceErrorCard {
+  min-height: 104px;
+  border-color: rgba(251, 191, 36, 0.22);
+  background: rgba(251, 191, 36, 0.06);
 }
 
 .sourceOverviewTop {
@@ -1382,7 +1488,7 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text);
+  color: #f8fbff;
   font-size: 16px;
 }
 
@@ -1997,6 +2103,42 @@ a {
 
 .panel {
   padding: 16px;
+}
+
+.captureModeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px 0;
+}
+
+.captureModeHeader div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.captureModeHeader span,
+.captureModeHeader small {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.captureModeHeader strong {
+  min-width: 0;
+  color: #f8fbff;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.captureModeHeader small {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .capturePanel textarea {
@@ -5533,6 +5675,7 @@ body {
   }
 
   .statusStrip,
+  .dailyCommandBrief,
   .dashboardFocusTabs,
   .priorityBoard,
   .priorityCards,
@@ -5645,6 +5788,15 @@ body {
 
   .inboxRowActions {
     justify-content: flex-start;
+  }
+
+  .sourceProblemNotice {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .sourceProblemNotice small {
+    grid-column: 2;
+    white-space: normal;
   }
 
   .sourceTag {
