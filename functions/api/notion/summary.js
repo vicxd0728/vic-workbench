@@ -33,6 +33,17 @@ function sortPages(pages, sortMode) {
   });
 }
 
+function isSystemGeneratedPageTitle(title = '') {
+  return [
+    /Vic Workbench/i,
+    /Workbench AI/i,
+    /AI\s*總覽摘要/i,
+    /AI\s*摘要/i,
+    /資料中心/,
+    /資料庫管理/
+  ].some((pattern) => pattern.test(title));
+}
+
 function summarizeText(text) {
   const cleaned = text.replace(/\s+/g, ' ').trim();
   if (!cleaned) return '這個頁面目前沒有可整理的文字內容。';
@@ -157,7 +168,8 @@ async function readFolder(source, token) {
       title: block.child_page?.title || '未命名子頁',
       url: `https://www.notion.so/${block.id.replace(/-/g, '')}`,
       lastEditedTime: block.last_edited_time
-    }));
+    }))
+    .filter((page) => !isSystemGeneratedPageTitle(page.title));
 
   const selected = sortPages(childPages, source.sortMode).slice(0, limit);
   return Promise.all(selected.map(async (page) => {
