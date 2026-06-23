@@ -221,7 +221,7 @@ const notionDatabaseDetails = {
 };
 
 const workbenchNotionDefaults = {
-  hubUrl: 'https://app.notion.com/p/Workbench-387ff6f424bb8159962be9c34c2ad6ca',
+  hubUrl: 'https://app.notion.com/p/Vic-Workbench-Data-Center-387ff6f424bb81a890eddcee1a6abd2e',
   databasePageUrl: 'https://app.notion.com/p/387ff6f424bb81cd9f98f805ba27462e',
   captureId: '387ff6f424bb8196a0d7db4b72427a0b',
   captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
