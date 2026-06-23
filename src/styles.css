@@ -1413,35 +1413,6 @@ a {
   border-color: transparent;
 }
 
-.sourceProblemNotice {
-  display: grid;
-  grid-template-columns: 18px auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  min-height: 40px;
-  padding: 9px 11px;
-  border: 1px solid rgba(251, 191, 36, 0.24);
-  border-radius: 8px;
-  background: rgba(251, 191, 36, 0.08);
-  color: #fde68a;
-  text-align: left;
-}
-
-.sourceProblemNotice span {
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.sourceProblemNotice small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #c7d7ee;
-  font-size: 12px;
-}
-
 .sourceOverviewCard {
   display: grid;
   gap: 10px;
@@ -5788,15 +5759,6 @@ body {
 
   .inboxRowActions {
     justify-content: flex-start;
-  }
-
-  .sourceProblemNotice {
-    grid-template-columns: 18px minmax(0, 1fr);
-  }
-
-  .sourceProblemNotice small {
-    grid-column: 2;
-    white-space: normal;
   }
 
   .sourceTag {

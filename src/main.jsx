@@ -1169,10 +1169,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
         : source.message
     };
   });
-  const sourceProblemCards = sourceDigestCards.filter((source) => source.isError);
-  const sourceCardsForView = focusTab === 'notion'
-    ? sourceDigestCards
-    : sourceDigestCards.filter((source) => !source.isError).slice(0, 6);
+  const sourceCardsForView = sourceDigestCards;
   const attentionItems = [
     updateAlerts.length > 0
       ? { level: 'warning', label: '資料來源有更新', value: `${updateAlerts.length} 個來源`, detail: `${updateAlerts[0].label} · ${formatKnowledgeTime(updateAlerts[0].latest.lastEditedTime)}` }
@@ -1384,17 +1381,10 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           <div className="sourceSectionHeader">
             <div>
               <h3>{showNotionDetail ? '各來源狀態' : '各來源最新'}</h3>
-              <span>{showNotionDetail ? '完整顯示每個來源的讀取狀態與最新頁面' : '首頁只顯示可用來源；錯誤移到資料來源分頁處理'}</span>
+              <span>{showNotionDetail ? '完整顯示每個來源的讀取狀態與最新頁面' : '每個來源都保留一格；需要處理的來源會用較低干擾方式顯示'}</span>
             </div>
             <button type="button" onClick={() => setActiveView('knowledge')}>管理資料來源 <ChevronRight size={15} /></button>
           </div>
-          {!showNotionDetail && sourceProblemCards.length > 0 && (
-            <button type="button" className="sourceProblemNotice" onClick={() => setFocusTab('notion')}>
-              <ShieldAlert size={16} />
-              <span>{sourceProblemCards.length} 個來源需要檢查</span>
-              <small>點開 Notion 分頁看連結、權限或 Token</small>
-            </button>
-          )}
           <div className="sourceOverviewGrid">
             {sourceCardsForView.length > 0 ? sourceCardsForView.map((source) => (
               <a className={`sourceOverviewCard ${source.isError ? 'sourceErrorCard' : ''}`} href={source.href || undefined} target={source.href ? '_blank' : undefined} rel={source.href ? 'noreferrer' : undefined} key={source.id} onClick={(event) => {
