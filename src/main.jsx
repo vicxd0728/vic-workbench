@@ -558,6 +558,7 @@ function App() {
   const newsState = useNewsBriefs();
   const notionData = useNotionSources(notionConfig, setNotionConfig);
   const erpBoard = useErpBoardSummary();
+  const calendarData = useCalendarData();
 
   async function refreshCaptureInbox({ silent = false } = {}) {
     if (!silent) setCaptureSync({ status: 'loading', message: '正在同步 Notion 收件匣...' });
@@ -845,6 +846,7 @@ function App() {
           resetDemoData={clearLocalData}
           newsState={newsState}
           erpBoard={erpBoard}
+          calendarData={calendarData}
         />
       </main>
     </div>
@@ -881,7 +883,8 @@ function ActiveView(props) {
     refreshCaptureInbox,
     resetDemoData,
     newsState,
-    erpBoard
+    erpBoard,
+    calendarData
   } = props;
 
   if (activeView === 'knowledge') {
@@ -951,7 +954,7 @@ function ActiveView(props) {
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
           <PageHeader title="行事曆" subtitle="串接 Google Calendar，快速查看近期行程，也能直接新增提醒與會議。" />
-          <CalendarWorkspace />
+          <CalendarWorkspace calendarData={calendarData} />
         </div>
         <aside className="insightRail">
           <FocusPanel stats={stats} />
@@ -1006,6 +1009,7 @@ function ActiveView(props) {
           notionData={notionData}
           newsState={newsState}
           erpBoard={erpBoard}
+          calendarData={calendarData}
         />
       </div>
     </section>
@@ -1077,7 +1081,7 @@ function PageHeader({ title, subtitle }) {
   );
 }
 
-function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData, newsState, erpBoard }) {
+function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notionData, newsState, erpBoard, calendarData }) {
   const [focusTab, setFocusTab] = useState('overview');
   const importantTasks = tasks.filter((task) => !task.done).slice(0, 3);
   const queueCount = notes.filter((note) => !note.synced).length;
@@ -1115,6 +1119,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const newsHighlights = (newsState?.briefs?.length ? newsState.briefs : newsBriefs).slice(0, 4);
   const newsItems = (newsState?.items || []).slice(0, 6);
   const topNews = newsHighlights[0];
+  const calendarEvents = [...(calendarData?.events || [])].sort((a, b) => new Date(a.start) - new Date(b.start));
+  const todayCalendarEvents = calendarEvents.filter((event) => isSameLocalDay(new Date(event.start), new Date()));
+  const nextCalendarEvent = calendarEvents.find((event) => new Date(event.end || event.start).getTime() >= Date.now());
   const newsUpdatedLabel = newsState?.fetchedAt ? formatKnowledgeTime(newsState.fetchedAt) : '尚未更新';
   const newsHitLabel = newsState?.keywordHits?.length ? `${newsState.keywordHits[0].keyword} ${newsState.keywordHits[0].count} 則` : '無關鍵字命中';
   const sourceDigestCards = notionData.sourceBriefs.map((source) => {
@@ -1179,6 +1186,14 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
       detail: topNews?.title || '新聞來源整理中',
       action: '查看新聞',
       onClick: () => setFocusTab('news')
+    },
+    {
+      tone: calendarData?.connected ? (todayCalendarEvents.length ? 'warning' : 'ok') : 'muted',
+      label: '行事曆',
+      value: calendarData?.connected ? `${todayCalendarEvents.length} 筆今日` : '尚未連接',
+      detail: calendarData?.connected ? (nextCalendarEvent ? `${nextCalendarEvent.title} · ${formatCalendarRange(nextCalendarEvent.start, nextCalendarEvent.end)}` : '今天沒有緊急行程') : '連接 Google Calendar',
+      action: '看行程',
+      onClick: () => setActiveView('calendar')
     }
   ];
   const serviceHealthCards = deploymentLinks
@@ -1232,6 +1247,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
         <div><Clock3 size={18} /><span>今天</span><strong>{todayLabel}</strong></div>
         <div><BookOpen size={18} /><span>Notion</span><strong>{notionData.allLiveItems.length ? '已同步' : '讀取中'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '等待資料'}</small></div>
         <div><BarChart3 size={18} /><span>ERP</span><strong>{erpData ? `${erpData.totalPending} 待處理` : '讀取中'}</strong><small>{erpData ? `逾期 ${erpData.overdue || 0} / 庫存 ${erpData.stockWarning || 0}` : '等待資料'}</small></div>
+        <div><CalendarDays size={18} /><span>行事曆</span><strong>{calendarData?.connected ? `${todayCalendarEvents.length} 筆今日` : '待連接'}</strong><small>{nextCalendarEvent ? formatCalendarRange(nextCalendarEvent.start, nextCalendarEvent.end) : '沒有近期提醒'}</small></div>
         <div><Sparkles size={18} /><span>最新來源</span><strong>{newestSource?.label || '等待資料'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '尚未同步'}</small></div>
         <div><Wifi size={18} /><span>服務狀態</span><strong>{serviceNormalCount}/{serviceTotalCount} 正常</strong><small>{deviceOnline ? '本機代理在線' : '本機代理待回報'}</small></div>
       </div>
@@ -1363,7 +1379,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           </div>
         </section>}
 
-        {focusTab === 'overview' && <aside className="dashboardSidePanel serviceHealthPanel">
+        {focusTab === 'overview' && <aside className="dashboardSidePanel dashboardStackPanel">
+          <CalendarMiniAgenda calendarData={calendarData} setActiveView={setActiveView} />
+          <div className="serviceHealthPanel">
           <div className="dashboardPanelHeader compact">
             <div><h2>服務狀態</h2><span>常用系統入口與連線概況</span></div>
             <button type="button" onClick={() => setActiveView('links')}>全部連結 <ChevronRight size={15} /></button>
@@ -1387,6 +1405,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
               </div>
               <em>{deviceOnline ? '正常' : '待確認'}</em>
             </button>
+          </div>
           </div>
         </aside>}
 
@@ -1746,6 +1765,149 @@ function useErpBoardSummary() {
   }, [refresh]);
 
   return { ...state, refresh };
+}
+
+function useCalendarData() {
+  const [state, setState] = useState({
+    status: 'checking',
+    connected: false,
+    configured: false,
+    message: '正在檢查 Google Calendar 連線',
+    events: [],
+    isLoading: false
+  });
+  const [notificationPermission, setNotificationPermission] = useState(() => (
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
+  ));
+  const notifiedRef = useRef(new Set());
+
+  const loadEvents = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setState((current) => ({ ...current, isLoading: true }));
+    try {
+      const response = await fetch('/api/calendar/events?days=14');
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || '讀取 Google Calendar 失敗');
+      setState((current) => ({
+        ...current,
+        status: 'ready',
+        connected: true,
+        configured: true,
+        message: 'Google Calendar 已同步',
+        events: data.events || [],
+        isLoading: false
+      }));
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        status: 'error',
+        message: error.message || '讀取 Google Calendar 失敗',
+        isLoading: false
+      }));
+    }
+  }, []);
+
+  const loadStatus = useCallback(async () => {
+    setState((current) => ({ ...current, isLoading: true }));
+    try {
+      const response = await fetch('/api/calendar/status');
+      const data = await response.json();
+      const connected = Boolean(data.connected);
+      setState((current) => ({
+        ...current,
+        status: response.ok && data.ok ? 'ready' : 'error',
+        connected,
+        configured: Boolean(data.configured),
+        message: data.message || (connected ? 'Google Calendar 已連線' : '尚未連接 Google Calendar'),
+        isLoading: false
+      }));
+      if (connected) loadEvents({ silent: true });
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        status: 'error',
+        connected: false,
+        message: error.message || '無法檢查 Google Calendar 連線',
+        isLoading: false
+      }));
+    }
+  }, [loadEvents]);
+
+  const createEvent = useCallback(async (payload) => {
+    setState((current) => ({ ...current, isLoading: true }));
+    const response = await fetch('/api/calendar/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      setState((current) => ({ ...current, isLoading: false, status: 'error', message: data.message || '新增 Google Calendar 行程失敗' }));
+      throw new Error(data.message || '新增 Google Calendar 行程失敗');
+    }
+    setState((current) => ({ ...current, message: '已新增到 Google Calendar' }));
+    await loadEvents({ silent: true });
+    return data.event;
+  }, [loadEvents]);
+
+  const deleteEvent = useCallback(async (eventId) => {
+    if (!eventId) return;
+    setState((current) => ({ ...current, isLoading: true }));
+    const response = await fetch(`/api/calendar/events?id=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+    const data = await response.json().catch(() => ({ ok: response.ok }));
+    if (!response.ok || !data.ok) {
+      setState((current) => ({ ...current, isLoading: false, status: 'error', message: data.message || '刪除 Google Calendar 行程失敗' }));
+      throw new Error(data.message || '刪除 Google Calendar 行程失敗');
+    }
+    setState((current) => ({
+      ...current,
+      status: 'ready',
+      message: '已刪除行程',
+      isLoading: false,
+      events: current.events.filter((event) => event.id !== eventId)
+    }));
+  }, []);
+
+  const requestNotifications = useCallback(async () => {
+    if (typeof Notification === 'undefined') {
+      setNotificationPermission('unsupported');
+      return 'unsupported';
+    }
+    const result = await Notification.requestPermission();
+    setNotificationPermission(result);
+    return result;
+  }, []);
+
+  useEffect(() => {
+    loadStatus();
+    const timer = window.setInterval(() => loadEvents({ silent: true }), 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [loadEvents, loadStatus]);
+
+  useEffect(() => {
+    if (notificationPermission !== 'granted') return;
+    const now = Date.now();
+    state.events.forEach((event) => {
+      const startTime = new Date(event.start).getTime();
+      const minutesUntil = Math.round((startTime - now) / 60000);
+      if (minutesUntil < 0 || minutesUntil > 30 || notifiedRef.current.has(event.id)) return;
+      notifiedRef.current.add(event.id);
+      new Notification('Vic Workbench 行程提醒', {
+        body: `${event.title} · ${formatCalendarRange(event.start, event.end)}`,
+        tag: `calendar-${event.id}`,
+        icon: '/icons/icon-192.png'
+      });
+    });
+  }, [notificationPermission, state.events]);
+
+  return {
+    ...state,
+    loadStatus,
+    loadEvents,
+    createEvent,
+    deleteEvent,
+    notificationPermission,
+    requestNotifications
+  };
 }
 
 function useNotionSources(notionConfig, setNotionConfig) {
@@ -2964,7 +3126,7 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
   );
 }
 
-function CalendarWorkspace() {
+function CalendarWorkspace({ calendarData }) {
   const [status, setStatus] = useState({ status: 'checking', connected: false, message: '正在檢查 Google Calendar 連線' });
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -3064,6 +3226,7 @@ function CalendarWorkspace() {
         </div>
         <div className="calendarActions">
           <button className="secondaryAction" type="button" onClick={loadEvents} disabled={!status.connected || isLoading}><RotateCcw size={16} /><span>重新整理</span></button>
+          <button className="secondaryAction" type="button" onClick={() => calendarData?.requestNotifications?.()} disabled={calendarData?.notificationPermission === 'granted' || calendarData?.notificationPermission === 'unsupported'}><Bell size={16} /><span>{calendarData?.notificationPermission === 'granted' ? '通知已開' : '開啟通知'}</span></button>
           {!status.connected && <a className="primaryAction" href="/api/calendar/auth"><CalendarDays size={17} />連接 Google</a>}
         </div>
       </div>
@@ -3104,6 +3267,45 @@ function CalendarWorkspace() {
           <article><strong>1. 建立 Google OAuth 憑證</strong><p>Google Cloud Console 建立 Web application OAuth Client。</p></article>
           <article><strong>2. 設定 Cloudflare Secrets</strong><p>需要 `GOOGLE_CLIENT_ID` 與 `GOOGLE_CLIENT_SECRET`。</p></article>
           <article><strong>3. 回到這裡授權</strong><p>按「連接 Google」後，Workbench 才能讀寫你的行事曆。</p></article>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CalendarMiniAgenda({ calendarData, setActiveView }) {
+  const events = [...(calendarData?.events || [])].sort((a, b) => new Date(a.start) - new Date(b.start));
+  const todayEvents = events.filter((event) => isSameLocalDay(new Date(event.start), new Date()));
+  const nextEvent = events.find((event) => new Date(event.end || event.start).getTime() >= Date.now());
+  const connected = Boolean(calendarData?.connected);
+
+  return (
+    <section className="calendarMiniPanel">
+      <div className="dashboardPanelHeader compact">
+        <div><h2>今日行程</h2><span>{connected ? `${todayEvents.length} 筆今天 · ${events.length} 筆近期` : '尚未連接 Google Calendar'}</span></div>
+        <button type="button" onClick={() => setActiveView('calendar')}>行事曆 <ChevronRight size={15} /></button>
+      </div>
+      {connected ? (
+        <>
+          <div className="nextEventCard">
+            <span>下一筆</span>
+            <strong>{nextEvent?.title || '沒有待提醒行程'}</strong>
+            <small>{nextEvent ? formatCalendarRange(nextEvent.start, nextEvent.end) : '今天可以安排重點工作。'}</small>
+          </div>
+          <div className="miniAgendaRows">
+            {(todayEvents.length ? todayEvents : events.slice(0, 3)).slice(0, 4).map((event) => (
+              <a href={event.htmlLink || undefined} target={event.htmlLink ? '_blank' : undefined} rel={event.htmlLink ? 'noreferrer' : undefined} key={event.id}>
+                <time>{formatCalendarRange(event.start, event.end)}</time>
+                <strong>{event.title}</strong>
+              </a>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="calendarConnectPrompt">
+          <CalendarDays size={19} />
+          <p>連接後，總攬會直接顯示今日行程與下一筆提醒。</p>
+          <a href="/api/calendar/auth">連接 Google</a>
         </div>
       )}
     </section>

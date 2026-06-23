@@ -782,7 +782,7 @@ a {
 
 .statusStrip {
   display: grid;
-  grid-template-columns: 1.35fr repeat(4, minmax(132px, 1fr));
+  grid-template-columns: 1.25fr repeat(5, minmax(118px, 1fr));
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -888,7 +888,7 @@ a {
 
 .priorityCards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 
@@ -4989,6 +4989,99 @@ body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.dashboardStackPanel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.calendarMiniPanel,
+.serviceHealthPanel {
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 10px;
+  background: rgba(7, 15, 29, 0.64);
+  padding: 13px;
+}
+
+.calendarMiniPanel {
+  background:
+    linear-gradient(145deg, rgba(8, 31, 48, 0.82), rgba(6, 15, 28, 0.68)),
+    radial-gradient(circle at 80% 0%, rgba(45, 212, 191, 0.14), transparent 42%);
+}
+
+.nextEventCard {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  border-radius: 9px;
+  background: rgba(8, 47, 73, 0.42);
+}
+
+.nextEventCard span,
+.nextEventCard small,
+.miniAgendaRows time,
+.calendarConnectPrompt p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.nextEventCard strong {
+  color: #f8fbff;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.miniAgendaRows {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.miniAgendaRows a {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 9px 10px;
+  border: 1px solid rgba(125, 166, 217, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 8, 23, 0.34);
+  color: var(--text);
+}
+
+.miniAgendaRows strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.calendarConnectPrompt {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px dashed rgba(125, 211, 252, 0.32);
+  border-radius: 9px;
+}
+
+.calendarConnectPrompt a {
+  color: #7dd3fc;
+  font-weight: 850;
+}
+
+.calendarNotice {
+  padding: 11px 13px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 12px;
+  background: rgba(8, 20, 37, 0.72);
+  color: var(--muted);
 }
 
 @media (max-width: 760px) {
