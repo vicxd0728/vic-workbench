@@ -954,7 +954,7 @@ function ActiveView(props) {
       <section className="contentGrid singlePage">
         <div className="primaryColumn">
           <PageHeader title="行事曆" subtitle="串接 Google Calendar，快速查看近期行程，也能直接新增提醒與會議。" />
-          <CalendarWorkspace calendarData={calendarData} />
+          <CalendarWorkspaceV2 calendarData={calendarData} />
         </div>
         <aside className="insightRail">
           <FocusPanel stats={stats} />
@@ -1628,6 +1628,23 @@ function formatCalendarRange(start, end) {
   return `${startText} - ${endText}`;
 }
 
+function buildCalendarMonth(monthDate) {
+  const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const gridStart = new Date(first);
+  gridStart.setDate(first.getDate() - first.getDay());
+  const today = new Date();
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return {
+      key: date.toISOString().slice(0, 10),
+      date,
+      outside: date.getMonth() !== monthDate.getMonth(),
+      today: isSameLocalDay(date, today)
+    };
+  });
+}
+
 const inboxTimeFilters = [
   { id: 'today', label: '今日' },
   { id: '7d', label: '7 天內' },
@@ -1784,7 +1801,7 @@ function useCalendarData() {
   const loadEvents = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, isLoading: true }));
     try {
-      const response = await fetch('/api/calendar/events?days=14');
+      const response = await fetch('/api/calendar/events?days=90');
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || '讀取 Google Calendar 失敗');
       setState((current) => ({
@@ -3309,6 +3326,178 @@ function CalendarMiniAgenda({ calendarData, setActiveView }) {
         </div>
       )}
     </section>
+  );
+}
+
+function CalendarWorkspaceV2({ calendarData }) {
+  const fallbackCalendar = useCalendarData();
+  const calendar = calendarData || fallbackCalendar;
+  const [monthCursor, setMonthCursor] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [viewMode, setViewMode] = useState('month');
+  const [formOpen, setFormOpen] = useState(false);
+  const [form, setForm] = useState(() => {
+    const start = new Date(Date.now() + 60 * 60 * 1000);
+    const end = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    return { title: '', start: formatDateTimeInput(start), end: formatDateTimeInput(end), description: '' };
+  });
+  const [message, setMessage] = useState('');
+  const events = useMemo(() => [...(calendar.events || [])].sort((a, b) => new Date(a.start) - new Date(b.start)), [calendar.events]);
+  const monthDays = useMemo(() => buildCalendarMonth(monthCursor), [monthCursor]);
+  const selectedEvents = events.filter((event) => isSameLocalDay(new Date(event.start), selectedDate));
+  const monthEvents = events.filter((event) => {
+    const time = new Date(event.start);
+    return time.getFullYear() === monthCursor.getFullYear() && time.getMonth() === monthCursor.getMonth();
+  });
+  const upcomingEvents = events.filter((event) => new Date(event.end || event.start).getTime() >= Date.now()).slice(0, 8);
+  const nextEvent = upcomingEvents[0];
+  const monthLabel = new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'long' }).format(monthCursor);
+  const notificationLabel = calendar.notificationPermission === 'granted' ? '通知已開' : '開啟通知';
+
+  function moveMonth(delta) {
+    setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
+  }
+
+  function goToday() {
+    const now = new Date();
+    setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDate(now);
+  }
+
+  async function createEvent(event) {
+    event.preventDefault();
+    if (!form.title.trim()) return;
+    try {
+      await calendar.createEvent({
+        ...form,
+        start: new Date(form.start).toISOString(),
+        end: new Date(form.end).toISOString()
+      });
+      setForm((current) => ({ ...current, title: '', description: '' }));
+      setMessage('已新增到 Google Calendar');
+      setFormOpen(false);
+    } catch (error) {
+      setMessage(error.message || '新增 Google Calendar 行程失敗');
+    }
+  }
+
+  function selectDay(day) {
+    setSelectedDate(day.date);
+    if (day.outside) setMonthCursor(new Date(day.date.getFullYear(), day.date.getMonth(), 1));
+  }
+
+  return (
+    <section className="calendarAppShell">
+      <header className="calendarTopbar">
+        <div className="calendarNavCluster">
+          <button type="button" onClick={goToday}>今天</button>
+          <button type="button" aria-label="上個月" onClick={() => moveMonth(-1)}><ChevronRight className="flipIcon" size={17} /></button>
+          <button type="button" aria-label="下個月" onClick={() => moveMonth(1)}><ChevronRight size={17} /></button>
+          <h2>{monthLabel}</h2>
+        </div>
+        <div className="calendarToolbarRight">
+          <span className={`calendarConn ${calendar.connected ? 'ok' : 'warn'}`}>{calendar.connected ? 'Google 已連線' : '尚未連線'}</span>
+          <div className="calendarViewSwitch">
+            {['month', 'agenda'].map((id) => <button type="button" className={viewMode === id ? 'active' : ''} key={id} onClick={() => setViewMode(id)}>{id === 'month' ? '月' : '清單'}</button>)}
+          </div>
+          <button type="button" onClick={() => calendar.loadEvents()} disabled={!calendar.connected || calendar.isLoading}><RotateCcw size={16} />同步</button>
+          <button type="button" onClick={calendar.requestNotifications} disabled={calendar.notificationPermission === 'granted' || calendar.notificationPermission === 'unsupported'}><Bell size={16} />{notificationLabel}</button>
+        </div>
+      </header>
+
+      {!calendar.connected && (
+        <div className="calendarConnectStrip">
+          <CalendarDays size={18} />
+          <span>連接 Google Calendar 後，Workbench 可查詢、新增、修改與刪除行程。</span>
+          <a href="/api/calendar/auth">連接 Google</a>
+        </div>
+      )}
+
+      <div className="calendarMainGrid">
+        <main className="calendarBoardPanel">
+          <div className="calendarStatsLine">
+            <span>本月 {monthEvents.length} 筆</span>
+            <span>近期 {events.length} 筆</span>
+            <span>{nextEvent ? `下一筆 ${formatCalendarRange(nextEvent.start, nextEvent.end)}` : '沒有近期提醒'}</span>
+          </div>
+          {viewMode === 'month' ? (
+            <div className="calendarMonthGrid">
+              {['日', '一', '二', '三', '四', '五', '六'].map((label) => <div className="calendarWeekday" key={label}>{label}</div>)}
+              {monthDays.map((day) => {
+                const dayEvents = events.filter((event) => isSameLocalDay(new Date(event.start), day.date));
+                const selected = isSameLocalDay(day.date, selectedDate);
+                return (
+                  <button type="button" className={`calendarDayCell ${day.outside ? 'outside' : ''} ${day.today ? 'today' : ''} ${selected ? 'selected' : ''}`} key={day.key} onClick={() => selectDay(day)}>
+                    <span>{day.date.getDate()}</span>
+                    <div>
+                      {dayEvents.slice(0, 3).map((event) => <em key={event.id}>{event.title}</em>)}
+                      {dayEvents.length > 3 && <small>+{dayEvents.length - 3}</small>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="calendarAgendaList">
+              {upcomingEvents.map((event) => <CalendarAgendaRow event={event} key={event.id} onDelete={calendar.deleteEvent} />)}
+              {!upcomingEvents.length && <div className="emptyState">目前沒有近期行程。</div>}
+            </div>
+          )}
+        </main>
+
+        <aside className="calendarInspector">
+          <section className="nextEventPanel">
+            <span>下一筆行程</span>
+            <strong>{nextEvent?.title || '沒有待提醒行程'}</strong>
+            <small>{nextEvent ? formatCalendarRange(nextEvent.start, nextEvent.end) : '可以安排重點工作。'}</small>
+          </section>
+          <section className="selectedDayPanel">
+            <div className="calendarInspectorHeader">
+              <div>
+                <strong>{new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(selectedDate)}</strong>
+                <span>{selectedEvents.length} 筆行程</span>
+              </div>
+              <button type="button" onClick={() => {
+                const start = new Date(selectedDate);
+                start.setHours(9, 0, 0, 0);
+                const end = new Date(selectedDate);
+                end.setHours(10, 0, 0, 0);
+                setForm((current) => ({ ...current, start: formatDateTimeInput(start), end: formatDateTimeInput(end) }));
+                setFormOpen((current) => !current);
+              }}><Plus size={15} /></button>
+            </div>
+            <div className="selectedEventList">
+              {selectedEvents.map((event) => <CalendarAgendaRow event={event} key={event.id} onDelete={calendar.deleteEvent} compact />)}
+              {!selectedEvents.length && <p>這天沒有行程。</p>}
+            </div>
+          </section>
+          {formOpen && (
+            <form className="calendarQuickForm" onSubmit={createEvent}>
+              <label><span>行程名稱</span><input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="例如：客戶週報會議" /></label>
+              <label><span>開始</span><input type="datetime-local" value={form.start} onChange={(event) => setForm((current) => ({ ...current, start: event.target.value }))} /></label>
+              <label><span>結束</span><input type="datetime-local" value={form.end} onChange={(event) => setForm((current) => ({ ...current, end: event.target.value }))} /></label>
+              <label><span>備註</span><input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Notion 連結或提醒內容" /></label>
+              <button className="primaryAction" type="submit" disabled={calendar.isLoading}><Plus size={16} />新增</button>
+            </form>
+          )}
+          {(message || calendar.message) && <div className={`calendarNotice ${calendar.status}`}>{message || calendar.message}</div>}
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function CalendarAgendaRow({ event, onDelete, compact = false }) {
+  return (
+    <article className={`calendarAgendaRow ${compact ? 'compact' : ''}`}>
+      <time>{formatCalendarRange(event.start, event.end)}</time>
+      <div>
+        <strong>{event.title}</strong>
+        <span>{event.description || event.location || '無備註'}</span>
+      </div>
+      {event.htmlLink && <a href={event.htmlLink} target="_blank" rel="noreferrer" aria-label="開啟 Google Calendar"><ExternalLink size={14} /></a>}
+      <button type="button" aria-label="刪除行程" onClick={() => onDelete?.(event.id)}><Trash2 size={14} /></button>
+    </article>
   );
 }
 
