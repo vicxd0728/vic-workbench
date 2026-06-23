@@ -4849,6 +4849,148 @@ body {
   }
 }
 
+.calendarWorkspace {
+  display: grid;
+  gap: 18px;
+}
+
+.calendarHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid rgba(79, 209, 197, 0.28);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(11, 31, 52, 0.92), rgba(9, 48, 61, 0.68));
+}
+
+.calendarHero span,
+.calendarOverview span,
+.calendarCreateForm span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.calendarHero h2 {
+  margin: 6px 0;
+  font-size: 28px;
+}
+
+.calendarHero p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.calendarActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.calendarOverview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.calendarOverview article,
+.calendarSetupGuide article {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 18, 34, 0.72);
+}
+
+.calendarOverview strong {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 26px;
+  color: var(--accent);
+}
+
+.calendarOverview small,
+.calendarSetupGuide p,
+.calendarEventRow span {
+  color: var(--muted);
+}
+
+.calendarCreateForm {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(7, 15, 29, 0.72);
+}
+
+.calendarCreateForm label {
+  display: grid;
+  gap: 7px;
+}
+
+.calendarCreateForm input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  background: rgba(2, 8, 23, 0.62);
+  color: var(--text);
+  padding: 0 12px;
+}
+
+.calendarCreateForm .wideField {
+  grid-column: 1 / span 3;
+}
+
+.calendarEventList {
+  display: grid;
+  gap: 10px;
+}
+
+.calendarEventRow {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 38px 38px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 20, 37, 0.76);
+}
+
+.calendarEventRow time {
+  color: #7dd3fc;
+  font-size: 13px;
+}
+
+.calendarEventRow strong,
+.calendarEventRow span {
+  display: block;
+}
+
+.calendarEventRow a,
+.calendarEventRow button {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text);
+}
+
+.calendarSetupGuide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 @media (max-width: 760px) {
   .newsRefreshBar {
     align-items: flex-start;
@@ -5121,6 +5263,12 @@ body {
 
   .notionSetup,
   .connectionGuide,
+  .calendarHero,
+  .calendarOverview,
+  .calendarCreateForm,
+  .calendarCreateForm .wideField,
+  .calendarEventRow,
+  .calendarSetupGuide,
   .settingsHero,
   .settingsTabs,
   .settingsLayerGrid,
@@ -5198,6 +5346,16 @@ body {
   .settingsSectionHeader small {
     width: fit-content;
     margin-left: 0;
+  }
+
+  .calendarCreateForm .wideField {
+    grid-column: auto;
+  }
+
+  .calendarActions,
+  .calendarActions .primaryAction,
+  .calendarActions .secondaryAction {
+    width: 100%;
   }
 
   .databaseSummary {

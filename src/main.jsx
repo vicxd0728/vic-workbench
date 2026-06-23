@@ -5,6 +5,7 @@ import {
   Bell,
   BookOpen,
   BriefcaseBusiness,
+  CalendarDays,
   CheckCircle2,
   CheckSquare,
   ChevronRight,
@@ -62,6 +63,7 @@ const navItems = [
   { id: 'inbox', label: '快速紀錄', icon: Inbox },
   { id: 'projects', label: '專案', icon: FolderKanban },
   { id: 'knowledge', label: '資料來源', icon: BookOpen },
+  { id: 'calendar', label: '行事曆', icon: CalendarDays },
   { id: 'news', label: '新聞', icon: Newspaper },
   { id: 'links', label: '連結', icon: Link2 },
   { id: 'automation', label: '設置', icon: Zap }
@@ -944,6 +946,21 @@ function ActiveView(props) {
     );
   }
 
+  if (activeView === 'calendar') {
+    return (
+      <section className="contentGrid singlePage">
+        <div className="primaryColumn">
+          <PageHeader title="行事曆" subtitle="串接 Google Calendar，快速查看近期行程，也能直接新增提醒與會議。" />
+          <CalendarWorkspace />
+        </div>
+        <aside className="insightRail">
+          <FocusPanel stats={stats} />
+          <AutomationPanel setActiveView={setActiveView} />
+        </aside>
+      </section>
+    );
+  }
+
   if (activeView === 'links') {
     return (
       <section className="contentGrid singlePage">
@@ -1568,6 +1585,28 @@ function isSameLocalDay(a, b) {
 
 function isSameLocalMonth(a, b) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function formatDateTimeInput(date) {
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 16);
+}
+
+function formatCalendarRange(start, end) {
+  if (!start) return '未設定時間';
+  const formatter = new Intl.DateTimeFormat('zh-TW', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const startText = formatter.format(new Date(start));
+  if (!end) return startText;
+  const endText = new Intl.DateTimeFormat('zh-TW', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(end));
+  return `${startText} - ${endText}`;
 }
 
 const inboxTimeFilters = [
@@ -2921,6 +2960,152 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
         {notes.length === 0 && <div className="emptyState">目前沒有快速紀錄。</div>}
         {notes.length > 0 && filteredNotes.length === 0 && <div className="emptyState">這個時間範圍沒有資料。</div>}
       </div>
+    </section>
+  );
+}
+
+function CalendarWorkspace() {
+  const [status, setStatus] = useState({ status: 'checking', connected: false, message: '正在檢查 Google Calendar 連線' });
+  const [events, setEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [form, setForm] = useState({
+    title: '',
+    start: formatDateTimeInput(new Date(Date.now() + 60 * 60 * 1000)),
+    end: formatDateTimeInput(new Date(Date.now() + 2 * 60 * 60 * 1000)),
+    description: ''
+  });
+
+  const todayEvents = events.filter((event) => isSameLocalDay(new Date(event.start), new Date()));
+  const upcomingEvents = events.filter((event) => !isSameLocalDay(new Date(event.start), new Date())).slice(0, 8);
+
+  async function loadStatus() {
+    try {
+      const response = await fetch('/api/calendar/status');
+      const data = await response.json();
+      setStatus({
+        status: response.ok && data.ok ? 'ready' : 'error',
+        connected: Boolean(data.connected),
+        configured: Boolean(data.configured),
+        message: data.message || (data.connected ? 'Google Calendar 已連線' : '尚未連接 Google Calendar')
+      });
+      if (data.connected) loadEvents();
+    } catch (error) {
+      setStatus({ status: 'error', connected: false, message: error.message || '無法檢查 Google Calendar 連線' });
+    }
+  }
+
+  async function loadEvents() {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/calendar/events?days=14');
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || '讀取 Google Calendar 失敗');
+      setEvents(data.events || []);
+    } catch (error) {
+      setStatus((current) => ({ ...current, status: 'error', message: error.message || '讀取 Google Calendar 失敗' }));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function createEvent(event) {
+    event.preventDefault();
+    if (!form.title.trim() || !form.start || !form.end) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          start: new Date(form.start).toISOString(),
+          end: new Date(form.end).toISOString()
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || '新增 Google Calendar 行程失敗');
+      setForm((current) => ({ ...current, title: '', description: '' }));
+      setStatus((current) => ({ ...current, status: 'ready', message: '已新增到 Google Calendar' }));
+      await loadEvents();
+    } catch (error) {
+      setStatus((current) => ({ ...current, status: 'error', message: error.message || '新增 Google Calendar 行程失敗' }));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function deleteEvent(eventId) {
+    if (!eventId) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/calendar/events?id=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+      const data = await response.json().catch(() => ({ ok: response.ok }));
+      if (!response.ok || !data.ok) throw new Error(data.message || '刪除 Google Calendar 行程失敗');
+      setEvents((current) => current.filter((event) => event.id !== eventId));
+      setStatus((current) => ({ ...current, status: 'ready', message: '已刪除行程' }));
+    } catch (error) {
+      setStatus((current) => ({ ...current, status: 'error', message: error.message || '刪除 Google Calendar 行程失敗' }));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadStatus();
+  }, []);
+
+  return (
+    <section className="panel calendarWorkspace">
+      <div className="calendarHero">
+        <div>
+          <span>Google Calendar</span>
+          <h2>{status.connected ? '已連接行事曆' : '連接你的 Google 行事曆'}</h2>
+          <p>{status.message}</p>
+        </div>
+        <div className="calendarActions">
+          <button className="secondaryAction" type="button" onClick={loadEvents} disabled={!status.connected || isLoading}><RotateCcw size={16} /><span>重新整理</span></button>
+          {!status.connected && <a className="primaryAction" href="/api/calendar/auth"><CalendarDays size={17} />連接 Google</a>}
+        </div>
+      </div>
+
+      {status.connected ? (
+        <>
+          <div className="calendarOverview">
+            <article><span>今日行程</span><strong>{todayEvents.length}</strong><small>今天需要留意</small></article>
+            <article><span>14 天內</span><strong>{events.length}</strong><small>已同步行程</small></article>
+            <article><span>狀態</span><strong>{isLoading ? '同步中' : '正常'}</strong><small>Google API</small></article>
+          </div>
+
+          <form className="calendarCreateForm" onSubmit={createEvent}>
+            <label><span>行程名稱</span><input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="例如：客戶週報會議" /></label>
+            <label><span>開始時間</span><input type="datetime-local" value={form.start} onChange={(event) => setForm((current) => ({ ...current, start: event.target.value }))} /></label>
+            <label><span>結束時間</span><input type="datetime-local" value={form.end} onChange={(event) => setForm((current) => ({ ...current, end: event.target.value }))} /></label>
+            <label className="wideField"><span>備註</span><input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="可放 Notion 會議筆記連結或提醒內容" /></label>
+            <button className="primaryAction" type="submit" disabled={isLoading}><Plus size={17} />新增行程</button>
+          </form>
+
+          <div className="calendarEventList">
+            <div className="settingsSectionHeader">
+              <div><strong>近期行程</strong><small>依 Google Calendar 時間排序</small></div>
+            </div>
+            {[...todayEvents, ...upcomingEvents].map((event) => (
+              <article className="calendarEventRow" key={event.id}>
+                <time>{formatCalendarRange(event.start, event.end)}</time>
+                <div><strong>{event.title}</strong><span>{event.description || event.location || '無備註'}</span></div>
+                {event.htmlLink && <a href={event.htmlLink} target="_blank" rel="noreferrer"><ExternalLink size={15} /></a>}
+                <button type="button" aria-label="刪除行程" onClick={() => deleteEvent(event.id)}><Trash2 size={14} /></button>
+              </article>
+            ))}
+            {!events.length && <div className="emptyState">目前 14 天內沒有讀到行程。</div>}
+          </div>
+        </>
+      ) : (
+        <div className="calendarSetupGuide">
+          <article><strong>1. 建立 Google OAuth 憑證</strong><p>Google Cloud Console 建立 Web application OAuth Client。</p></article>
+          <article><strong>2. 設定 Cloudflare Secrets</strong><p>需要 `GOOGLE_CLIENT_ID` 與 `GOOGLE_CLIENT_SECRET`。</p></article>
+          <article><strong>3. 回到這裡授權</strong><p>按「連接 Google」後，Workbench 才能讀寫你的行事曆。</p></article>
+        </div>
+      )}
     </section>
   );
 }
