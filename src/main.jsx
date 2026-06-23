@@ -223,10 +223,10 @@ const notionDatabaseDetails = {
 const workbenchNotionDefaults = {
   hubUrl: 'https://app.notion.com/p/Vic-Workbench-Data-Center-387ff6f424bb81a890eddcee1a6abd2e',
   databasePageUrl: 'https://app.notion.com/p/387ff6f424bb81cd9f98f805ba27462e',
-  captureId: '387ff6f424bb8196a0d7db4b72427a0b',
-  captureUrl: 'https://app.notion.com/p/387ff6f424bb8196a0d7db4b72427a0b',
-  meetingId: '387ff6f424bb8192ac4ef6b7e8791a1a',
-  meetingUrl: 'https://app.notion.com/p/387ff6f424bb8192ac4ef6b7e8791a1a?v=387ff6f424bb810ba54c000c1d602d55'
+  captureId: '388ff6f424bb81b9abd0e9e3558f3f68',
+  captureUrl: 'https://app.notion.com/p/388ff6f424bb81b9abd0e9e3558f3f68',
+  meetingId: '388ff6f424bb810ca867ed2fbb4a8cda',
+  meetingUrl: 'https://app.notion.com/p/388ff6f424bb810ca867ed2fbb4a8cda'
 };
 
 const defaultNotionDatabaseConfig = {

@@ -1,14 +1,14 @@
 const NOTION_VERSION = '2022-06-28';
-const DEFAULT_CAPTURE_DATABASE_ID = '387ff6f424bb8196a0d7db4b72427a0b';
+const DEFAULT_CAPTURE_DATABASE_ID = '388ff6f424bb81b9abd0e9e3558f3f68';
 
 const columns = {
-  title: '名稱',
-  type: '分類',
-  status: '處理狀態',
-  source: '輸入來源',
+  title: '標題',
+  type: '類型',
+  status: '狀態',
+  source: '來源',
   originalUrl: '原始連結',
   content: '內容',
-  createdAt: '建立日期'
+  createdAt: '建立時間'
 };
 
 const legacyColumns = {
@@ -34,7 +34,7 @@ const typeMap = {
   idea: '靈感',
   link: '連結',
   meeting: '會議',
-  voice: '語音紀錄'
+  voice: '語音'
 };
 
 const typeAliases = {
@@ -49,7 +49,7 @@ const typeAliases = {
   靈感: 'idea',
   連結: 'link',
   會議: 'meeting',
-  語音紀錄: 'voice'
+  語音: 'voice'
 };
 
 const statusAliases = {
@@ -63,14 +63,19 @@ const statusAliases = {
 
 const sourceMap = {
   '手機 App': '手機 App',
-  '桌面網頁': '桌面網頁',
+  '桌面 Web': '桌面 Web',
   'Mobile App': '手機 App',
-  'Desktop Web': '桌面網頁',
+  'Desktop Web': '桌面 Web',
   'Vic Workbench': 'Vic Workbench'
 };
 
 function json(data, status = 200) {
-  return Response.json(data, { status });
+  return Response.json(data, {
+    status,
+    headers: {
+      'Cache-Control': 'no-store'
+    }
+  });
 }
 
 function getPlainText(richText = []) {
@@ -102,7 +107,7 @@ function normalizeSource(value) {
 
 function noteFromPage(page) {
   const properties = page.properties || {};
-  const typeLabel = getProperty(properties, columns.type, legacyColumns.type, ['類型'])?.select?.name || typeMap.note;
+  const typeLabel = getProperty(properties, columns.type, legacyColumns.type, ['分類'])?.select?.name || typeMap.note;
   const statusLabel = getProperty(properties, columns.status, legacyColumns.status, ['狀態'])?.select?.name || labels.pending;
   const sourceLabel = getProperty(properties, columns.source, legacyColumns.source, ['來源'])?.select?.name || labels.workbench;
 
@@ -116,7 +121,7 @@ function noteFromPage(page) {
     content: textFromProperty(getProperty(properties, columns.content, legacyColumns.content)),
     url: page.url,
     originalUrl: textFromProperty(getProperty(properties, columns.originalUrl, legacyColumns.originalUrl)),
-    time: page.created_time,
+    time: getProperty(properties, columns.createdAt, legacyColumns.createdAt)?.date?.start || page.created_time,
     synced: true
   };
 }
@@ -263,6 +268,6 @@ export async function onRequestDelete({ request, env }) {
 
     return json({ ok: true });
   } catch (error) {
-    return json({ ok: false, message: error.message || '刪除 Notion 紀錄失敗。' }, 500);
+    return json({ ok: false, message: error.message || '刪除 Notion 頁面失敗。' }, 500);
   }
 }
