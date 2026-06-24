@@ -1919,6 +1919,23 @@ function useCalendarData() {
     return data.event;
   }, [loadEvents]);
 
+  const updateEvent = useCallback(async (payload) => {
+    setState((current) => ({ ...current, isLoading: true }));
+    const response = await fetch('/api/calendar/events', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      setState((current) => ({ ...current, isLoading: false, status: 'error', message: data.message || '更新 Google Calendar 行程失敗' }));
+      throw new Error(data.message || '更新 Google Calendar 行程失敗');
+    }
+    setState((current) => ({ ...current, message: '已更新 Google Calendar 行程' }));
+    await loadEvents({ silent: true });
+    return data.event;
+  }, [loadEvents]);
+
   const deleteEvent = useCallback(async (eventId) => {
     if (!eventId) return;
     setState((current) => ({ ...current, isLoading: true }));
@@ -1974,6 +1991,7 @@ function useCalendarData() {
     loadStatus,
     loadEvents,
     createEvent,
+    updateEvent,
     deleteEvent,
     notificationPermission,
     requestNotifications
@@ -3413,6 +3431,7 @@ function CalendarMiniAgenda({ calendarData, setActiveView }) {
   );
 }
 
+
 function CalendarWorkspaceV2({ calendarData }) {
   const fallbackCalendar = useCalendarData();
   const calendar = calendarData || fallbackCalendar;
@@ -3420,23 +3439,38 @@ function CalendarWorkspaceV2({ calendarData }) {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [viewMode, setViewMode] = useState('month');
   const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState(() => {
-    const start = new Date(Date.now() + 60 * 60 * 1000);
-    const end = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    return { title: '', start: formatDateTimeInput(start), end: formatDateTimeInput(end), description: '' };
-  });
+  const [editingEventId, setEditingEventId] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [form, setForm] = useState(() => buildCalendarForm(new Date()));
   const [message, setMessage] = useState('');
   const events = useMemo(() => [...(calendar.events || [])].sort((a, b) => new Date(a.start) - new Date(b.start)), [calendar.events]);
   const monthDays = useMemo(() => buildCalendarMonth(monthCursor), [monthCursor]);
   const selectedEvents = events.filter((event) => isSameLocalDay(new Date(event.start), selectedDate));
+  const selectedEvent = events.find((event) => event.id === selectedEventId) || selectedEvents[0] || null;
   const monthEvents = events.filter((event) => {
     const time = new Date(event.start);
     return time.getFullYear() === monthCursor.getFullYear() && time.getMonth() === monthCursor.getMonth();
   });
-  const upcomingEvents = events.filter((event) => new Date(event.end || event.start).getTime() >= Date.now()).slice(0, 8);
+  const upcomingEvents = events.filter((event) => new Date(event.end || event.start).getTime() >= Date.now()).slice(0, 12);
   const nextEvent = upcomingEvents[0];
   const monthLabel = new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'long' }).format(monthCursor);
-  const notificationLabel = calendar.notificationPermission === 'granted' ? '通知已開' : '開啟通知';
+  const notificationLabel = calendar.notificationPermission === 'granted' ? '通知已開啟' : '開啟通知';
+
+  function buildCalendarForm(date, sourceEvent = null) {
+    if (sourceEvent) {
+      return {
+        title: sourceEvent.title || '',
+        start: formatDateTimeInput(new Date(sourceEvent.start)),
+        end: formatDateTimeInput(new Date(sourceEvent.end || sourceEvent.start)),
+        description: sourceEvent.description || sourceEvent.location || ''
+      };
+    }
+    const start = new Date(date || new Date());
+    start.setHours(9, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1);
+    return { title: '', start: formatDateTimeInput(start), end: formatDateTimeInput(end), description: '' };
+  }
 
   function moveMonth(delta) {
     setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
@@ -3446,28 +3480,68 @@ function CalendarWorkspaceV2({ calendarData }) {
     const now = new Date();
     setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
     setSelectedDate(now);
-  }
-
-  async function createEvent(event) {
-    event.preventDefault();
-    if (!form.title.trim()) return;
-    try {
-      await calendar.createEvent({
-        ...form,
-        start: new Date(form.start).toISOString(),
-        end: new Date(form.end).toISOString()
-      });
-      setForm((current) => ({ ...current, title: '', description: '' }));
-      setMessage('已新增到 Google Calendar');
-      setFormOpen(false);
-    } catch (error) {
-      setMessage(error.message || '新增 Google Calendar 行程失敗');
-    }
+    setSelectedEventId('');
   }
 
   function selectDay(day) {
     setSelectedDate(day.date);
+    setSelectedEventId('');
     if (day.outside) setMonthCursor(new Date(day.date.getFullYear(), day.date.getMonth(), 1));
+  }
+
+  function openCreateForm(date = selectedDate) {
+    setEditingEventId('');
+    setForm(buildCalendarForm(date));
+    setFormOpen(true);
+  }
+
+  function openEditForm(event) {
+    if (!event) return;
+    setSelectedEventId(event.id);
+    setEditingEventId(event.id);
+    setForm(buildCalendarForm(selectedDate, event));
+    setFormOpen(true);
+  }
+
+  async function saveEvent(event) {
+    event.preventDefault();
+    if (!form.title.trim() || !form.start || !form.end) return;
+    const payload = {
+      ...form,
+      start: new Date(form.start).toISOString(),
+      end: new Date(form.end).toISOString()
+    };
+    try {
+      if (editingEventId) {
+        await calendar.updateEvent({ ...payload, id: editingEventId });
+        setMessage('已更新 Google Calendar 行程');
+      } else {
+        const created = await calendar.createEvent(payload);
+        setSelectedEventId(created?.id || '');
+        setMessage('已新增 Google Calendar 行程');
+      }
+      setFormOpen(false);
+      setEditingEventId('');
+    } catch (error) {
+      setMessage(error.message || 'Google Calendar 操作失敗');
+    }
+  }
+
+  async function removeEvent(eventId) {
+    if (!eventId) return;
+    const confirmed = window.confirm('確定要刪除這個行程嗎？');
+    if (!confirmed) return;
+    try {
+      await calendar.deleteEvent(eventId);
+      if (selectedEventId === eventId) setSelectedEventId('');
+      if (editingEventId === eventId) {
+        setEditingEventId('');
+        setFormOpen(false);
+      }
+      setMessage('已刪除 Google Calendar 行程');
+    } catch (error) {
+      setMessage(error.message || '刪除 Google Calendar 行程失敗');
+    }
   }
 
   return (
@@ -3475,24 +3549,26 @@ function CalendarWorkspaceV2({ calendarData }) {
       <header className="calendarTopbar">
         <div className="calendarNavCluster">
           <button type="button" onClick={goToday}>今天</button>
-          <button type="button" aria-label="上個月" onClick={() => moveMonth(-1)}><ChevronRight className="flipIcon" size={17} /></button>
-          <button type="button" aria-label="下個月" onClick={() => moveMonth(1)}><ChevronRight size={17} /></button>
+          <button type="button" aria-label="上一個月" onClick={() => moveMonth(-1)}><ChevronRight className="flipIcon" size={17} /></button>
+          <button type="button" aria-label="下一個月" onClick={() => moveMonth(1)}><ChevronRight size={17} /></button>
           <h2>{monthLabel}</h2>
         </div>
         <div className="calendarToolbarRight">
-          <span className={`calendarConn ${calendar.connected ? 'ok' : 'warn'}`}>{calendar.connected ? 'Google 已連線' : '尚未連線'}</span>
+          <span className={'calendarConn ' + (calendar.connected ? 'ok' : 'warn')}>{calendar.connected ? 'Google 已連線' : '尚未連線'}</span>
           <div className="calendarViewSwitch">
-            {['month', 'agenda'].map((id) => <button type="button" className={viewMode === id ? 'active' : ''} key={id} onClick={() => setViewMode(id)}>{id === 'month' ? '月' : '清單'}</button>)}
+            <button type="button" className={viewMode === 'month' ? 'active' : ''} onClick={() => setViewMode('month')}>月曆</button>
+            <button type="button" className={viewMode === 'agenda' ? 'active' : ''} onClick={() => setViewMode('agenda')}>清單</button>
           </div>
           <button type="button" onClick={() => calendar.loadEvents()} disabled={!calendar.connected || calendar.isLoading}><RotateCcw size={16} />同步</button>
           <button type="button" onClick={calendar.requestNotifications} disabled={calendar.notificationPermission === 'granted' || calendar.notificationPermission === 'unsupported'}><Bell size={16} />{notificationLabel}</button>
+          <button type="button" className="calendarAddButton" onClick={() => openCreateForm()} disabled={!calendar.connected}><Plus size={16} />新增</button>
         </div>
       </header>
 
       {!calendar.connected && (
         <div className="calendarConnectStrip">
           <CalendarDays size={18} />
-          <span>連接 Google Calendar 後，Workbench 可查詢、新增、修改與刪除行程。</span>
+          <span>連上 Google Calendar 後，可在 Workbench 直接新增、修改、刪除與查看行程。</span>
           <a href="/api/calendar/auth">連接 Google</a>
         </div>
       )}
@@ -3501,8 +3577,8 @@ function CalendarWorkspaceV2({ calendarData }) {
         <main className="calendarBoardPanel">
           <div className="calendarStatsLine">
             <span>本月 {monthEvents.length} 筆</span>
-            <span>近期 {events.length} 筆</span>
-            <span>{nextEvent ? `下一筆 ${formatCalendarRange(nextEvent.start, nextEvent.end)}` : '沒有近期提醒'}</span>
+            <span>已同步 {events.length} 筆</span>
+            <span>{nextEvent ? '下一個：' + formatCalendarRange(nextEvent.start, nextEvent.end) : '近期沒有行程'}</span>
           </div>
           {viewMode === 'month' ? (
             <div className="calendarMonthGrid">
@@ -3511,10 +3587,22 @@ function CalendarWorkspaceV2({ calendarData }) {
                 const dayEvents = events.filter((event) => isSameLocalDay(new Date(event.start), day.date));
                 const selected = isSameLocalDay(day.date, selectedDate);
                 return (
-                  <button type="button" className={`calendarDayCell ${day.outside ? 'outside' : ''} ${day.today ? 'today' : ''} ${selected ? 'selected' : ''}`} key={day.key} onClick={() => selectDay(day)}>
+                  <button type="button" className={'calendarDayCell ' + (day.outside ? 'outside ' : '') + (day.today ? 'today ' : '') + (selected ? 'selected' : '')} key={day.key} onClick={() => selectDay(day)}>
                     <span>{day.date.getDate()}</span>
                     <div>
-                      {dayEvents.slice(0, 3).map((event) => <em key={event.id}>{event.title}</em>)}
+                      {dayEvents.slice(0, 3).map((event) => (
+                        <span
+                          className="calendarDayEvent"
+                          key={event.id}
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation();
+                            setSelectedDate(day.date);
+                            setSelectedEventId(event.id);
+                          }}
+                        >
+                          {event.title}
+                        </span>
+                      ))}
                       {dayEvents.length > 3 && <small>+{dayEvents.length - 3}</small>}
                     </div>
                   </button>
@@ -3523,64 +3611,85 @@ function CalendarWorkspaceV2({ calendarData }) {
             </div>
           ) : (
             <div className="calendarAgendaList">
-              {upcomingEvents.map((event) => <CalendarAgendaRow event={event} key={event.id} onDelete={calendar.deleteEvent} />)}
-              {!upcomingEvents.length && <div className="emptyState">目前沒有近期行程。</div>}
+              {upcomingEvents.map((event) => (
+                <CalendarAgendaRow event={event} key={event.id} onSelect={() => setSelectedEventId(event.id)} onEdit={() => openEditForm(event)} onDelete={removeEvent} />
+              ))}
+              {!upcomingEvents.length && <div className="emptyState">近期沒有已同步行程。</div>}
             </div>
           )}
         </main>
 
         <aside className="calendarInspector">
           <section className="nextEventPanel">
-            <span>下一筆行程</span>
-            <strong>{nextEvent?.title || '沒有待提醒行程'}</strong>
-            <small>{nextEvent ? formatCalendarRange(nextEvent.start, nextEvent.end) : '可以安排重點工作。'}</small>
+            <span>下一個行程</span>
+            <strong>{nextEvent?.title || '近期沒有排程'}</strong>
+            <small>{nextEvent ? formatCalendarRange(nextEvent.start, nextEvent.end) : '新增行程後會同步到 Google Calendar。'}</small>
           </section>
+
           <section className="selectedDayPanel">
             <div className="calendarInspectorHeader">
               <div>
                 <strong>{new Intl.DateTimeFormat('zh-TW', { month: 'numeric', day: 'numeric', weekday: 'short' }).format(selectedDate)}</strong>
                 <span>{selectedEvents.length} 筆行程</span>
               </div>
-              <button type="button" onClick={() => {
-                const start = new Date(selectedDate);
-                start.setHours(9, 0, 0, 0);
-                const end = new Date(selectedDate);
-                end.setHours(10, 0, 0, 0);
-                setForm((current) => ({ ...current, start: formatDateTimeInput(start), end: formatDateTimeInput(end) }));
-                setFormOpen((current) => !current);
-              }}><Plus size={15} /></button>
+              <button type="button" aria-label="新增這天的行程" onClick={() => openCreateForm(selectedDate)}><Plus size={15} /></button>
             </div>
             <div className="selectedEventList">
-              {selectedEvents.map((event) => <CalendarAgendaRow event={event} key={event.id} onDelete={calendar.deleteEvent} compact />)}
+              {selectedEvents.map((event) => (
+                <CalendarAgendaRow event={event} key={event.id} onSelect={() => setSelectedEventId(event.id)} onEdit={() => openEditForm(event)} onDelete={removeEvent} compact />
+              ))}
               {!selectedEvents.length && <p>這天沒有行程。</p>}
             </div>
           </section>
+
+          {selectedEvent && (
+            <section className="calendarEventDetail">
+              <span>行程內容</span>
+              <strong>{selectedEvent.title}</strong>
+              <time>{formatCalendarRange(selectedEvent.start, selectedEvent.end)}</time>
+              <p>{selectedEvent.description || selectedEvent.location || '沒有備註'}</p>
+              <div className="calendarDetailActions">
+                {selectedEvent.htmlLink && <a href={selectedEvent.htmlLink} target="_blank" rel="noreferrer"><ExternalLink size={14} />Google</a>}
+                <button type="button" onClick={() => openEditForm(selectedEvent)}><FileText size={14} />編輯</button>
+                <button type="button" className="danger" onClick={() => removeEvent(selectedEvent.id)}><Trash2 size={14} />刪除</button>
+              </div>
+            </section>
+          )}
+
           {formOpen && (
-            <form className="calendarQuickForm" onSubmit={createEvent}>
+            <form className="calendarQuickForm calendarEditorSheet" onSubmit={saveEvent}>
+              <div className="calendarEditorHeader">
+                <strong>{editingEventId ? '編輯行程' : '新增行程'}</strong>
+                <button type="button" onClick={() => { setFormOpen(false); setEditingEventId(''); }}>取消</button>
+              </div>
               <label><span>行程名稱</span><input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="例如：客戶週報會議" /></label>
-              <label><span>開始</span><input type="datetime-local" value={form.start} onChange={(event) => setForm((current) => ({ ...current, start: event.target.value }))} /></label>
-              <label><span>結束</span><input type="datetime-local" value={form.end} onChange={(event) => setForm((current) => ({ ...current, end: event.target.value }))} /></label>
-              <label><span>備註</span><input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Notion 連結或提醒內容" /></label>
-              <button className="primaryAction" type="submit" disabled={calendar.isLoading}><Plus size={16} />新增</button>
+              <label><span>開始時間</span><input type="datetime-local" value={form.start} onChange={(event) => setForm((current) => ({ ...current, start: event.target.value }))} /></label>
+              <label><span>結束時間</span><input type="datetime-local" value={form.end} onChange={(event) => setForm((current) => ({ ...current, end: event.target.value }))} /></label>
+              <label><span>備註</span><input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="可放 Notion 會議連結或提醒內容" /></label>
+              <button className="primaryAction" type="submit" disabled={calendar.isLoading}><Plus size={16} />{editingEventId ? '儲存修改' : '新增行程'}</button>
             </form>
           )}
-          {(message || calendar.message) && <div className={`calendarNotice ${calendar.status}`}>{message || calendar.message}</div>}
+
+          {(message || calendar.message) && <div className={'calendarNotice ' + calendar.status}>{message || calendar.message}</div>}
         </aside>
       </div>
+
+      {calendar.connected && <button type="button" className="calendarFab" onClick={() => openCreateForm(selectedDate)}><Plus size={20} /><span>新增</span></button>}
     </section>
   );
 }
 
-function CalendarAgendaRow({ event, onDelete, compact = false }) {
+function CalendarAgendaRow({ event, onDelete, onEdit, onSelect, compact = false }) {
   return (
-    <article className={`calendarAgendaRow ${compact ? 'compact' : ''}`}>
+    <article className={'calendarAgendaRow ' + (compact ? 'compact' : '')} onClick={onSelect}>
       <time>{formatCalendarRange(event.start, event.end)}</time>
       <div>
         <strong>{event.title}</strong>
         <span>{event.description || event.location || '無備註'}</span>
       </div>
-      {event.htmlLink && <a href={event.htmlLink} target="_blank" rel="noreferrer" aria-label="開啟 Google Calendar"><ExternalLink size={14} /></a>}
-      <button type="button" aria-label="刪除行程" onClick={() => onDelete?.(event.id)}><Trash2 size={14} /></button>
+      {event.htmlLink && <a href={event.htmlLink} target="_blank" rel="noreferrer" aria-label="開啟 Google Calendar" onClick={(clickEvent) => clickEvent.stopPropagation()}><ExternalLink size={14} /></a>}
+      <button type="button" aria-label="編輯行程" onClick={(clickEvent) => { clickEvent.stopPropagation(); onEdit?.(event); }}><FileText size={14} /></button>
+      <button type="button" aria-label="刪除行程" onClick={(clickEvent) => { clickEvent.stopPropagation(); onDelete?.(event.id); }}><Trash2 size={14} /></button>
     </article>
   );
 }
