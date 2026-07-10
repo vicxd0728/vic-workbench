@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vic-workbench-v6';
+const CACHE_NAME = 'vic-workbench-v7';
 const APP_SHELL = [
   '/',
   '/index.html',

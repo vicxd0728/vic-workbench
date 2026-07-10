@@ -781,39 +781,39 @@ a {
 }
 
 .commandDashboard > .actionConsoleHero {
-  order: 1;
-}
-
-.commandDashboard > .dailyCommandBrief {
-  order: 2;
-}
-
-.commandDashboard > .priorityBoard {
-  order: 3;
-}
-
-.commandDashboard > .dashboardFocusTabs {
-  order: 4;
-}
-
-.commandDashboard > .dashboardLayout {
-  order: 5;
-}
-
-.commandDashboard > .actionDashboardGrid {
-  order: 6;
-}
-
-.commandDashboard > .knowledgeRoutingStrip {
-  order: 7;
-}
-
-.commandDashboard > .inboxActionPreview {
   order: 8;
 }
 
-.commandDashboard > .shortTermReminderPanel {
+.commandDashboard > .dailyCommandBrief {
+  order: 1;
+}
+
+.commandDashboard > .priorityBoard {
+  order: 2;
+}
+
+.commandDashboard > .dashboardFocusTabs {
+  order: 3;
+}
+
+.commandDashboard > .dashboardLayout {
+  order: 4;
+}
+
+.commandDashboard > .actionDashboardGrid {
   order: 9;
+}
+
+.commandDashboard > .knowledgeRoutingStrip {
+  order: 5;
+}
+
+.commandDashboard > .inboxActionPreview {
+  order: 6;
+}
+
+.commandDashboard > .shortTermReminderPanel {
+  order: 7;
 }
 
 .commandDashboard > .referenceDivider {
