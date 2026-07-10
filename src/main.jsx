@@ -764,26 +764,28 @@ function App() {
     setLastAction('已標記為已同步');
   }
 
-  async function updateNote(id, title) {
-    const nextTitle = title.trim();
-    if (!nextTitle) return;
+  async function updateNote(id, titleOrPatch) {
     const target = notes.find((note) => note.id === id);
-    setNotes((current) => current.map((note) => (note.id === id ? { ...note, title: nextTitle, synced: false, time: '同步中' } : note)));
+    const patch = typeof titleOrPatch === 'string' ? { title: titleOrPatch } : (titleOrPatch || {});
+    const nextTitle = (patch.title ?? target?.title ?? '').trim();
+    if (!nextTitle) return;
+    const nextPatch = { ...patch, title: nextTitle, synced: false, time: new Date().toISOString() };
+    setNotes((current) => current.map((note) => (note.id === id ? { ...note, ...nextPatch } : note)));
     try {
-      if (target?.notionPageId) {
+      if (target?.notionPageId && (typeof titleOrPatch === 'string' || patch.content)) {
         const response = await fetch('/api/notion/capture', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: notionConfig.token, pageId: target.notionPageId, title: nextTitle, content: nextTitle })
+          body: JSON.stringify({ token: notionConfig.token, pageId: target.notionPageId, title: nextTitle, content: patch.content || nextTitle })
         });
         const data = await response.json();
         if (!response.ok || !data.ok) throw new Error(data.message || '更新 Notion 收件匣失敗。');
-        setNotes((current) => current.map((note) => (note.id === id ? data.note : note)));
+        setNotes((current) => current.map((note) => (note.id === id ? { ...note, ...data.note, ...nextPatch } : note)));
       }
-      setLastAction('已更新 Notion 收件匣');
+      setLastAction('已更新知識收件匣');
     } catch (error) {
       setCaptureSync({ status: 'error', message: error.message || '更新 Notion 收件匣失敗。' });
-      setLastAction('更新失敗，請稍後重試');
+      setLastAction('更新失敗，已先保留本機狀態');
     }
   }
 
@@ -1252,6 +1254,25 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     nextCalendarEvent ? `下一個行程：${nextCalendarEvent.title}，${formatCalendarRange(nextCalendarEvent.start, nextCalendarEvent.end)}。` : null
   ].filter(Boolean).slice(0, 4);
 
+  const inboxDigest = buildInboxDigest(notes);
+  const actionTasks = [...tasks]
+    .filter((task) => !task.done)
+    .sort((a, b) => Number(Boolean(b.important)) - Number(Boolean(a.important)))
+    .slice(0, 5);
+  const inferredTaskNotes = inboxDigest.taskReady.slice(0, 3);
+  const taskActionCount = actionTasks.length + inferredTaskNotes.length;
+  const weeklyTrackingItems = [
+    { label: 'CRM follow-up', count: inboxDigest.weeklyReady.filter((note) => /crm|客戶|追蹤|follow/i.test(note.title || '')).length, detail: inboxDigest.weeklyReady.find((note) => /crm|客戶|追蹤|follow/i.test(note.title || ''))?.title || '沒有新的 CRM 追蹤' },
+    { label: '內容待發', count: inboxDigest.weeklyReady.filter((note) => /內容|貼文|seo|文章|社媒/i.test(note.title || '')).length, detail: inboxDigest.weeklyReady.find((note) => /內容|貼文|seo|文章|社媒/i.test(note.title || ''))?.title || '沒有新的內容提醒' },
+    { label: '專案待處理', count: projects.filter((project) => project.status !== '完成').length, detail: projects.find((project) => project.status !== '完成')?.name || '沒有卡住的專案' },
+    { label: '週報待跟進', count: inboxDigest.weeklyReady.length, detail: inboxDigest.weeklyReady[0]?.title || newestSource?.latest?.title || '等待週報來源更新' }
+  ];
+  const shortTermReminders = [
+    nextCalendarEvent ? { label: '下一筆行程', detail: `${nextCalendarEvent.title} · ${formatCalendarRange(nextCalendarEvent.start, nextCalendarEvent.end)}` } : null,
+    erpData?.overdue > 0 ? { label: 'ERP 交期', detail: `逾期 ${erpData.overdue} 筆需要確認` } : null,
+    inboxDigest.taskReady.length ? { label: '可轉任務', detail: `${inboxDigest.taskReady.length} 筆收件匣資料可轉成任務` } : null
+  ].filter(Boolean).slice(0, 3);
+
   useEffect(() => {
     let isMounted = true;
     async function refreshDevice() {
@@ -1275,6 +1296,108 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
 
   return (
     <section className="commandDashboard">
+      <div className="actionConsoleHero">
+        <div>
+          <span>今日行動中控台</span>
+          <h2>先處理會推動結果的事</h2>
+          <p>任務、本週追蹤與知識分流排在最前面；連結、歷史與完整清單移到後段參考區。</p>
+        </div>
+        <button type="button" onClick={() => setActiveView('inbox')}><Inbox size={16} />整理收件匣</button>
+      </div>
+
+      <section className="actionDashboardGrid">
+        <article className="todayActionPanel">
+          <div className="actionPanelHeader">
+            <div>
+              <span>第一優先</span>
+              <h2>今日任務</h2>
+            </div>
+            <strong>{taskActionCount}</strong>
+          </div>
+          <div className="todayTaskList">
+            {actionTasks.map((task) => (
+              <div className="todayTaskRow" key={task.id}>
+                <button type="button" aria-label="切換任務狀態" onClick={() => setActiveView('projects')}><CheckCircle2 size={16} /></button>
+                <div>
+                  <strong>{task.title}</strong>
+                  <span>{stageLabels[task.stage] || '待處理'} · 下一步：{task.important ? '先處理這件' : '排入今日工作流'}</span>
+                </div>
+                <button type="button" onClick={() => setActiveView('projects')}>開啟</button>
+              </div>
+            ))}
+            {inferredTaskNotes.map((note) => (
+              <div className="todayTaskRow inboxDerived" key={note.id}>
+                <button type="button" aria-label="收件匣任務"><Inbox size={16} /></button>
+                <div>
+                  <strong>{note.title}</strong>
+                  <span>{getInboxTopic(note)} · 下一步：{getInboxNextStep(note)}</span>
+                </div>
+                <button type="button" onClick={() => setActiveView('inbox')}>分流</button>
+              </div>
+            ))}
+            {taskActionCount === 0 && <div className="actionEmpty">今天沒有明確任務。可以先整理收件匣，找出下一步。</div>}
+          </div>
+        </article>
+
+        <article className="weeklyTrackPanel">
+          <div className="actionPanelHeader compact">
+            <div>
+              <span>這週要盯</span>
+              <h2>本週追蹤</h2>
+            </div>
+          </div>
+          <div className="weeklyTrackList">
+            {weeklyTrackingItems.map((item) => (
+              <button type="button" key={item.label} onClick={() => setActiveView(item.label.includes('CRM') || item.label.includes('週報') ? 'knowledge' : 'projects')}>
+                <span>{item.label}</span>
+                <strong>{item.count}</strong>
+                <small>{item.detail}</small>
+              </button>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="knowledgeRoutingStrip">
+        <button type="button" onClick={() => setActiveView('inbox')}><span>待整理</span><strong>{inboxDigest.counts.triage}</strong></button>
+        <button type="button" onClick={() => setActiveView('inbox')}><span>可轉任務</span><strong>{inboxDigest.counts.task}</strong></button>
+        <button type="button" onClick={() => setActiveView('inbox')}><span>週報可讀</span><strong>{inboxDigest.counts.weekly}</strong></button>
+        <button type="button" onClick={() => setActiveView('inbox')}><span>可沉澱知識</span><strong>{inboxDigest.counts.knowledge}</strong></button>
+      </section>
+
+      <section className="inboxActionPreview">
+        <div className="actionPanelHeader compact">
+          <div>
+            <span>快速判斷資料要去哪裡</span>
+            <h2>知識收件匣摘要</h2>
+          </div>
+          <button type="button" onClick={() => setActiveView('inbox')}>看全部 <ChevronRight size={15} /></button>
+        </div>
+        <div className="inboxPreviewRows">
+          {inboxDigest.recent.slice(0, 5).map((note) => (
+            <article key={note.id}>
+              <div>
+                <strong>{note.title}</strong>
+                <span>{getInboxTopic(note)} · {getInboxFramework(note)}</span>
+                <small>下一步：{getInboxNextStep(note)}</small>
+              </div>
+              <em>{formatKnowledgeTime(getNoteTimeValue(note))}</em>
+            </article>
+          ))}
+          {inboxDigest.recent.length === 0 && <div className="actionEmpty">目前沒有待分流資料。</div>}
+        </div>
+      </section>
+
+      {shortTermReminders.length > 0 && (
+        <section className="shortTermReminderPanel">
+          <div className="actionPanelHeader compact"><div><span>近期管理</span><h2>接下來要留意</h2></div></div>
+          <div>
+            {shortTermReminders.map((item) => <p key={item.label}><strong>{item.label}</strong>{item.detail}</p>)}
+          </div>
+        </section>
+      )}
+
+      <div className="referenceDivider"><span>參考資訊與完整清單</span></div>
       <div className="statusStrip">
         <div><Clock3 size={18} /><span>今天</span><strong>{todayLabel}</strong></div>
         <div><BookOpen size={18} /><span>Notion</span><strong>{notionData.allLiveItems.length ? '已同步' : '讀取中'}</strong><small>{newestSource?.latest ? formatKnowledgeTime(newestSource.latest.lastEditedTime) : '等待資料'}</small></div>
@@ -1707,6 +1830,109 @@ const inboxTimeFilters = [
 ];
 
 const inboxLimitOptions = [6, 12, 24, 50];
+
+const inboxRoutingFilters = [
+  { id: 'all', label: '全部' },
+  { id: 'triage', label: '待整理' },
+  { id: 'task', label: '可轉任務' },
+  { id: 'knowledge', label: '可沉澱知識' },
+  { id: 'weekly', label: '週報可讀' },
+  { id: 'archived', label: '已封存' }
+];
+
+const inboxActionMap = {
+  task: { status: 'ready', routingType: 'task', label: '轉任務' },
+  knowledge: { status: 'ready', routingType: 'knowledge', label: '轉知識' },
+  weekly: { status: 'ready', routingType: 'weekly', label: '週報參考' },
+  archived: { status: 'archived', routingType: 'archived', label: '封存' }
+};
+
+function getNoteTimeValue(note) {
+  return note?.lastEditedTime || note?.updatedAt || note?.createdAt || note?.time;
+}
+
+function getNoteStatus(note = {}) {
+  if (note.status) return note.status;
+  if (note.archived || note.routingType === 'archived') return 'archived';
+  if (note.routingType && note.routingType !== 'triage') return 'ready';
+  return 'triage';
+}
+
+function inferInboxRoute(note = {}) {
+  if (note.routingType) return note.routingType;
+  const haystack = `${note.title || ''} ${note.content || ''} ${note.summary || ''}`.toLowerCase();
+  if (note.type === 'task' || /待辦|任務|todo|follow|追蹤|確認|聯絡|報價/.test(haystack)) return 'task';
+  if (/週報|weekly|crm|seo|市場|匯報|報告/.test(haystack)) return 'weekly';
+  if (note.type === 'link' || note.type === 'note' || /sop|知識|流程|方法|框架|教學|整理/.test(haystack)) return 'knowledge';
+  return 'triage';
+}
+
+function getInboxTopic(note = {}) {
+  if (note.topic) return note.topic;
+  if (note.type === 'meeting') return '會議';
+  if (note.type === 'voice') return '語音';
+  if (note.type === 'link') return '連結';
+  const route = inferInboxRoute(note);
+  if (route === 'task') return '待辦';
+  if (route === 'weekly') return '週報';
+  if (route === 'knowledge') return '知識';
+  return '未分類';
+}
+
+function getInboxFramework(note = {}) {
+  if (note.framework) return note.framework;
+  const route = inferInboxRoute(note);
+  if (route === 'task') return '任務 / 下一步';
+  if (route === 'weekly') return '週報參考';
+  if (route === 'knowledge') return '知識沉澱';
+  if (note.type === 'meeting') return '會議紀錄';
+  return '收件匣分流';
+}
+
+function getInboxNextStep(note = {}) {
+  if (note.nextStep) return note.nextStep;
+  const route = inferInboxRoute(note);
+  if (getNoteStatus(note) === 'archived') return '已封存，首頁不再優先顯示';
+  if (route === 'task') return '確認負責人與完成時間';
+  if (route === 'weekly') return '納入本週週報判讀';
+  if (route === 'knowledge') return '整理成正式知識頁';
+  return '判斷要轉任務、知識、週報或封存';
+}
+
+function buildInboxDigest(notes = []) {
+  const active = notes.filter((note) => getNoteStatus(note) !== 'archived');
+  const taskReady = active.filter((note) => inferInboxRoute(note) === 'task');
+  const weeklyReady = active.filter((note) => inferInboxRoute(note) === 'weekly');
+  const knowledgeReady = active.filter((note) => inferInboxRoute(note) === 'knowledge');
+  const triage = active.filter((note) => getNoteStatus(note) === 'triage' || inferInboxRoute(note) === 'triage');
+  const archived = notes.filter((note) => getNoteStatus(note) === 'archived');
+  const recent = [...active]
+    .sort((a, b) => new Date(getNoteTimeValue(b) || 0) - new Date(getNoteTimeValue(a) || 0))
+    .slice(0, 5);
+  return {
+    active,
+    triage,
+    taskReady,
+    weeklyReady,
+    knowledgeReady,
+    archived,
+    recent,
+    counts: {
+      triage: triage.length,
+      task: taskReady.length,
+      weekly: weeklyReady.length,
+      knowledge: knowledgeReady.length,
+      archived: archived.length
+    }
+  };
+}
+
+function filterInboxNotes(notes = [], filter = 'all') {
+  if (filter === 'all') return notes.filter((note) => getNoteStatus(note) !== 'archived');
+  if (filter === 'archived') return notes.filter((note) => getNoteStatus(note) === 'archived');
+  if (filter === 'triage') return notes.filter((note) => getNoteStatus(note) !== 'archived' && (getNoteStatus(note) === 'triage' || inferInboxRoute(note) === 'triage'));
+  return notes.filter((note) => getNoteStatus(note) !== 'archived' && inferInboxRoute(note) === filter);
+}
 
 function splitSummaryHighlights(text = '') {
   return text
@@ -3168,13 +3394,15 @@ function NotionPanel({ notes, syncNote }) {
 }
 
 function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captureSync, refreshCaptureInbox }) {
-  const [timeFilter, setTimeFilter] = useState(expanded ? '7d' : 'today');
+  const [timeFilter, setTimeFilter] = useState(expanded ? '7d' : 'all');
+  const [routeFilter, setRouteFilter] = useState('all');
   const [customRange, setCustomRange] = useState({ from: '', to: '' });
-  const [displayLimit, setDisplayLimit] = useState(expanded ? 24 : 6);
+  const [displayLimit, setDisplayLimit] = useState(expanded ? 24 : 5);
+  const digest = useMemo(() => buildInboxDigest(notes), [notes]);
   const filteredNotes = useMemo(() => {
     const now = new Date();
-    return notes.filter((note) => {
-      const noteTime = parseNoteTime(note.time || note.createdAt || note.lastEditedTime);
+    return filterInboxNotes(notes, routeFilter).filter((note) => {
+      const noteTime = parseNoteTime(getNoteTimeValue(note));
       if (timeFilter === 'all') return true;
       if (!noteTime) return false;
       if (timeFilter === 'today') return isSameLocalDay(noteTime, now);
@@ -3187,8 +3415,8 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
       }
       return true;
     });
-  }, [customRange.from, customRange.to, notes, timeFilter]);
-  const visibleNotes = filteredNotes.slice(0, displayLimit);
+  }, [customRange.from, customRange.to, notes, routeFilter, timeFilter]);
+  const visibleNotes = filteredNotes.slice(0, expanded ? displayLimit : Math.min(displayLimit, 5));
 
   function editNote(note) {
     const nextTitle = window.prompt('編輯知識收件匣內容', note.title);
@@ -3196,17 +3424,41 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
     updateNote?.(note.id, nextTitle);
   }
 
+  function routeNote(note, actionId) {
+    const action = inboxActionMap[actionId];
+    if (!action) return;
+    updateNote?.(note.id, {
+      routingType: action.routingType,
+      status: action.status,
+      topic: note.topic || getInboxTopic(note),
+      framework: note.framework || getInboxFramework({ ...note, routingType: action.routingType }),
+      nextStep: actionId === 'archived' ? '已封存，首頁不再優先顯示' : getInboxNextStep({ ...note, routingType: action.routingType }),
+      routedAt: new Date().toISOString()
+    });
+  }
+
   return (
-    <section className="panel inboxPanel">
+    <section className="panel inboxPanel actionInboxPanel">
       <div className="inboxSyncHeader">
-        <PanelTitle title="知識收件匣" count={filteredNotes.length} />
+        <div>
+          <PanelTitle title="知識收件匣" count={filteredNotes.length} />
+          <p className="inboxIntent">不是存很多東西，而是快速判斷每筆資料要轉任務、沉澱知識、放進週報或封存。</p>
+        </div>
         <button type="button" onClick={() => refreshCaptureInbox?.()}><RotateCcw size={14} />同步</button>
       </div>
       {captureSync?.message && <div className={`inboxSyncBanner ${captureSync.status}`}>{captureSync.message}</div>}
-      <div className="inboxFilters">
-        <div className="inboxFilterTabs" role="tablist" aria-label="知識收件匣時間篩選">
-          {inboxTimeFilters.map((item) => (
-            <button type="button" className={timeFilter === item.id ? 'activeInboxFilter' : ''} key={item.id} onClick={() => setTimeFilter(item.id)}>
+
+      <div className="inboxRoutingSummary">
+        <button type="button" onClick={() => setRouteFilter('triage')}><span>待整理</span><strong>{digest.counts.triage}</strong></button>
+        <button type="button" onClick={() => setRouteFilter('task')}><span>可轉任務</span><strong>{digest.counts.task}</strong></button>
+        <button type="button" onClick={() => setRouteFilter('weekly')}><span>週報可讀</span><strong>{digest.counts.weekly}</strong></button>
+        <button type="button" onClick={() => setRouteFilter('knowledge')}><span>可沉澱知識</span><strong>{digest.counts.knowledge}</strong></button>
+      </div>
+
+      <div className="inboxFilters routeFilters">
+        <div className="inboxFilterTabs" role="tablist" aria-label="知識收件匣分流篩選">
+          {inboxRoutingFilters.map((item) => (
+            <button type="button" className={routeFilter === item.id ? 'activeInboxFilter' : ''} key={item.id} onClick={() => setRouteFilter(item.id)}>
               {item.label}
             </button>
           ))}
@@ -3218,20 +3470,43 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
           </select>
         </label>
       </div>
+      <div className="inboxFilters timeFilters">
+        <div className="inboxFilterTabs" role="tablist" aria-label="知識收件匣時間篩選">
+          {inboxTimeFilters.map((item) => (
+            <button type="button" className={timeFilter === item.id ? 'activeInboxFilter' : ''} key={item.id} onClick={() => setTimeFilter(item.id)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
       {timeFilter === 'custom' && (
         <div className="inboxCustomRange">
-          <label><span>起</span><input type="date" value={customRange.from} onChange={(event) => setCustomRange((current) => ({ ...current, from: event.target.value }))} /></label>
-          <label><span>迄</span><input type="date" value={customRange.to} onChange={(event) => setCustomRange((current) => ({ ...current, to: event.target.value }))} /></label>
+          <label><span>從</span><input type="date" value={customRange.from} onChange={(event) => setCustomRange((current) => ({ ...current, from: event.target.value }))} /></label>
+          <label><span>到</span><input type="date" value={customRange.to} onChange={(event) => setCustomRange((current) => ({ ...current, to: event.target.value }))} /></label>
         </div>
       )}
       <div className="inboxResultMeta">顯示 {visibleNotes.length} 筆，符合條件 {filteredNotes.length} 筆，總資料 {notes.length} 筆。</div>
-      <div className="inboxRows">
+      <div className="inboxCards">
         {visibleNotes.map((note) => {
           const Icon = note.type === 'voice' ? Mic : captureTypes.find((type) => type.id === note.type)?.icon || FileText;
+          const route = inferInboxRoute(note);
           return (
-            <article className="inboxRow" key={note.id}>
-              <Icon size={16} /><strong>{note.title}</strong><em>{typeLabels[note.type]}</em><span>{formatKnowledgeTime(note.time)}</span>
-              <div className="inboxRowActions">
+            <article className={`inboxDecisionCard route-${route}`} key={note.id}>
+              <div className="inboxCardMain">
+                <Icon size={17} />
+                <div>
+                  <strong>{note.title}</strong>
+                  <span>主題：{getInboxTopic(note)}</span>
+                  <span>關聯框架：{getInboxFramework(note)}</span>
+                  <p>下一步：{getInboxNextStep(note)}</p>
+                </div>
+                <time>{formatKnowledgeTime(getNoteTimeValue(note))}</time>
+              </div>
+              <div className="inboxDecisionActions">
+                <button type="button" onClick={() => routeNote(note, 'task')}>轉任務</button>
+                <button type="button" onClick={() => routeNote(note, 'knowledge')}>轉知識</button>
+                <button type="button" onClick={() => routeNote(note, 'weekly')}>週報參考</button>
+                <button type="button" onClick={() => routeNote(note, 'archived')}>封存</button>
                 <button type="button" aria-label="編輯" onClick={() => editNote(note)}><FileText size={14} /></button>
                 <button type="button" aria-label="刪除" onClick={() => deleteNote?.(note.id)}><Trash2 size={14} /></button>
               </div>
@@ -3239,7 +3514,7 @@ function KnowledgePanel({ notes, expanded = false, updateNote, deleteNote, captu
           );
         })}
         {notes.length === 0 && <div className="emptyState">目前沒有快速紀錄。</div>}
-        {notes.length > 0 && filteredNotes.length === 0 && <div className="emptyState">這個時間範圍沒有資料。</div>}
+        {notes.length > 0 && filteredNotes.length === 0 && <div className="emptyState">這個篩選沒有資料。</div>}
       </div>
     </section>
   );

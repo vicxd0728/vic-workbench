@@ -1033,6 +1033,288 @@ a {
   color: #34d399;
 }
 
+.actionConsoleHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(8, 27, 48, 0.9), rgba(5, 13, 25, 0.78)),
+    radial-gradient(circle at 12% 0%, rgba(34, 211, 238, 0.2), transparent 36%);
+}
+
+.actionConsoleHero span,
+.actionPanelHeader span,
+.knowledgeRoutingStrip span,
+.inboxPreviewRows span,
+.inboxPreviewRows small,
+.shortTermReminderPanel span {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.actionConsoleHero h2 {
+  margin: 4px 0;
+  color: #f8fbff;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.actionConsoleHero p {
+  margin: 0;
+  color: #9fb2cc;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.actionConsoleHero button,
+.actionPanelHeader > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  border-radius: 9px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #e0f2fe;
+  font-weight: 850;
+}
+
+.actionDashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.75fr);
+  gap: 12px;
+}
+
+.todayActionPanel,
+.weeklyTrackPanel,
+.inboxActionPreview,
+.shortTermReminderPanel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 12px;
+  background: rgba(5, 13, 25, 0.72);
+}
+
+.todayActionPanel {
+  border-color: rgba(56, 189, 248, 0.34);
+  background:
+    linear-gradient(145deg, rgba(8, 47, 73, 0.78), rgba(5, 13, 25, 0.72)),
+    radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.18), transparent 38%);
+  box-shadow: 0 18px 56px rgba(8, 47, 73, 0.24);
+}
+
+.actionPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.actionPanelHeader h2 {
+  margin: 3px 0 0;
+  color: #f8fbff;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.actionPanelHeader > strong {
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 46px;
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  border-radius: 12px;
+  color: #f8fbff;
+  background: rgba(56, 189, 248, 0.14);
+  font-size: 24px;
+}
+
+.todayTaskList,
+.weeklyTrackList,
+.inboxPreviewRows {
+  display: grid;
+  gap: 8px;
+}
+
+.todayTaskRow {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 10px;
+  background: rgba(2, 8, 23, 0.42);
+}
+
+.todayTaskRow.inboxDerived {
+  border-color: rgba(45, 212, 191, 0.24);
+}
+
+.todayTaskRow button {
+  display: inline-grid;
+  place-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 8px;
+  color: #dbeafe;
+  background: rgba(15, 23, 42, 0.62);
+  font-weight: 850;
+}
+
+.todayTaskRow strong,
+.inboxPreviewRows strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fbff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todayTaskRow span {
+  display: block;
+  margin-top: 3px;
+  color: #9fb2cc;
+  font-size: 12px;
+}
+
+.weeklyTrackList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.weeklyTrackList button {
+  min-height: 94px;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 11px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 10px;
+  background: rgba(2, 8, 23, 0.34);
+  text-align: left;
+}
+
+.weeklyTrackList strong {
+  color: #f8fbff;
+  font-size: 22px;
+}
+
+.weeklyTrackList small {
+  min-width: 0;
+  overflow: hidden;
+  color: #9fb2cc;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledgeRoutingStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.knowledgeRoutingStrip button,
+.inboxRoutingSummary button {
+  display: grid;
+  gap: 3px;
+  min-height: 68px;
+  align-content: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 10px;
+  background: rgba(5, 13, 25, 0.62);
+  text-align: left;
+}
+
+.knowledgeRoutingStrip strong,
+.inboxRoutingSummary strong {
+  color: #f8fbff;
+  font-size: 24px;
+}
+
+.inboxPreviewRows article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(125, 166, 217, 0.12);
+}
+
+.inboxPreviewRows article:first-child {
+  border-top: 0;
+}
+
+.inboxPreviewRows em {
+  color: #9fb2cc;
+  font-size: 12px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.shortTermReminderPanel > div:last-child {
+  display: grid;
+  gap: 7px;
+}
+
+.shortTermReminderPanel p {
+  margin: 0;
+  color: #9fb2cc;
+  font-size: 13px;
+}
+
+.shortTermReminderPanel p strong {
+  margin-right: 8px;
+  color: #e0f2fe;
+}
+
+.referenceDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  color: #7f91ad;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.referenceDivider::before,
+.referenceDivider::after {
+  flex: 1;
+  height: 1px;
+  background: rgba(125, 166, 217, 0.14);
+  content: "";
+}
+
+.statusStrip,
+.dashboardFocusTabs,
+.priorityBoard {
+  opacity: 0.78;
+}
+
+.actionEmpty {
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 1px dashed rgba(125, 166, 217, 0.22);
+  border-radius: 10px;
+  color: #9fb2cc;
+  font-size: 13px;
+}
+
 .compactWelcome {
   min-height: 74px;
   padding: 14px 18px;
@@ -4221,6 +4503,129 @@ a {
   font-size: 12px;
 }
 
+.actionInboxPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.inboxIntent {
+  margin: -8px 0 0;
+  color: #9fb2cc;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.inboxRoutingSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.routeFilters {
+  margin-bottom: 0;
+}
+
+.timeFilters {
+  grid-template-columns: 1fr;
+  margin-top: -4px;
+}
+
+.inboxCards {
+  display: grid;
+  gap: 10px;
+}
+
+.inboxDecisionCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(125, 166, 217, 0.16);
+  border-radius: 12px;
+  background: rgba(5, 13, 25, 0.58);
+}
+
+.inboxDecisionCard.route-task {
+  border-color: rgba(96, 165, 250, 0.26);
+}
+
+.inboxDecisionCard.route-knowledge {
+  border-color: rgba(45, 212, 191, 0.24);
+}
+
+.inboxDecisionCard.route-weekly {
+  border-color: rgba(251, 191, 36, 0.24);
+}
+
+.inboxCardMain {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.inboxCardMain svg {
+  margin-top: 2px;
+  color: #7dd3fc;
+}
+
+.inboxCardMain strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #f8fbff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inboxCardMain span,
+.inboxCardMain p,
+.inboxCardMain time {
+  color: #9fb2cc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.inboxCardMain span {
+  display: inline-block;
+  margin: 5px 10px 0 0;
+}
+
+.inboxCardMain p {
+  margin: 7px 0 0;
+  color: #cbd5e1;
+}
+
+.inboxCardMain time {
+  white-space: nowrap;
+}
+
+.inboxDecisionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding-left: 32px;
+}
+
+.inboxDecisionActions button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid rgba(125, 166, 217, 0.18);
+  border-radius: 8px;
+  color: #dbeafe;
+  background: rgba(15, 23, 42, 0.64);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.inboxDecisionActions button:hover {
+  border-color: rgba(125, 211, 252, 0.42);
+  background: rgba(56, 189, 248, 0.12);
+}
+
 .resourcesPanel .railTitle button {
   margin-left: auto;
   display: inline-flex;
@@ -5960,6 +6365,10 @@ body {
 
   .statusStrip,
   .dailyCommandBrief,
+  .actionConsoleHero,
+  .actionDashboardGrid,
+  .knowledgeRoutingStrip,
+  .inboxRoutingSummary,
   .dashboardFocusTabs,
   .priorityBoard,
   .priorityCards,
@@ -5988,6 +6397,66 @@ body {
 
   .priorityCard em {
     justify-self: start;
+  }
+
+  .actionConsoleHero {
+    padding: 14px;
+  }
+
+  .actionConsoleHero h2 {
+    font-size: 20px;
+  }
+
+  .actionConsoleHero button,
+  .actionPanelHeader > button {
+    width: 100%;
+  }
+
+  .actionPanelHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actionPanelHeader > strong {
+    width: 100%;
+    height: 42px;
+  }
+
+  .todayTaskRow {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .todayTaskRow > button:last-child {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .weeklyTrackList {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledgeRoutingStrip,
+  .inboxRoutingSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inboxPreviewRows article,
+  .inboxCardMain {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inboxCardMain svg {
+    display: none;
+  }
+
+  .inboxCardMain time {
+    white-space: normal;
+  }
+
+  .inboxDecisionActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 0;
   }
 
   .sourceSectionHeader,
