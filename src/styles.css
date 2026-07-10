@@ -780,6 +780,50 @@ a {
   gap: 12px;
 }
 
+.commandDashboard > .actionConsoleHero {
+  order: 1;
+}
+
+.commandDashboard > .actionDashboardGrid {
+  order: 2;
+}
+
+.commandDashboard > .dailyCommandBrief {
+  order: 3;
+}
+
+.commandDashboard > .priorityBoard {
+  order: 4;
+}
+
+.commandDashboard > .knowledgeRoutingStrip {
+  order: 5;
+}
+
+.commandDashboard > .inboxActionPreview {
+  order: 6;
+}
+
+.commandDashboard > .shortTermReminderPanel {
+  order: 7;
+}
+
+.commandDashboard > .dashboardFocusTabs {
+  order: 8;
+}
+
+.commandDashboard > .dashboardLayout {
+  order: 9;
+}
+
+.commandDashboard > .referenceDivider {
+  order: 90;
+}
+
+.commandDashboard > .statusStrip {
+  order: 91;
+}
+
 .statusStrip {
   display: grid;
   grid-template-columns: 1.25fr repeat(5, minmax(118px, 1fr));
