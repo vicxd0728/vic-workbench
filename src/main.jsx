@@ -1358,6 +1358,35 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
         </article>
       </section>
 
+      <section className="dailyCommandBrief">
+        <div className="briefHero">
+          <span>今日中控</span>
+          <strong>{attentionItems.length ? '有訊號需要先看' : '目前沒有明顯警訊'}</strong>
+          <p>{briefHighlights[0] || newestItem?.summary || 'Notion、ERP、新聞與行事曆會在這裡整理成可快速判斷的重點。'}</p>
+        </div>
+        <div className="briefActionList">
+          <span>下一步</span>
+          {nextStepItems.length ? nextStepItems.map((item) => <p key={item}>{item}</p>) : <p>先從「即時重點整理」掃過，再進資料來源看細節。</p>}
+        </div>
+      </section>
+
+      <section className="priorityBoard">
+        <div className="priorityBoardTitle">
+          <span>今日優先</span>
+          <strong>{priorityMessage}</strong>
+        </div>
+        <div className="priorityCards">
+          {executiveCards.map((item) => (
+            <button className={`priorityCard ${item.tone}`} key={item.label} onClick={item.onClick}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+              <em>{item.action}</em>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="knowledgeRoutingStrip">
         <button type="button" onClick={() => setActiveView('inbox')}><span>待整理</span><strong>{inboxDigest.counts.triage}</strong></button>
         <button type="button" onClick={() => setActiveView('inbox')}><span>可轉任務</span><strong>{inboxDigest.counts.task}</strong></button>
@@ -1414,35 +1443,6 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
           </button>
         ))}
       </div>
-
-      <section className="dailyCommandBrief">
-        <div className="briefHero">
-          <span>今日中控</span>
-          <strong>{attentionItems.length ? '有訊號需要先看' : '目前沒有明顯警訊'}</strong>
-          <p>{briefHighlights[0] || newestItem?.summary || 'Notion、ERP、新聞與行事曆會在這裡整理成可快速判斷的重點。'}</p>
-        </div>
-        <div className="briefActionList">
-          <span>下一步</span>
-          {nextStepItems.length ? nextStepItems.map((item) => <p key={item}>{item}</p>) : <p>先從「即時重點整理」掃過，再進資料來源看細節。</p>}
-        </div>
-      </section>
-
-      <section className="priorityBoard">
-        <div className="priorityBoardTitle">
-          <span>今日優先</span>
-          <strong>{priorityMessage}</strong>
-        </div>
-        <div className="priorityCards">
-          {executiveCards.map((item) => (
-            <button className={`priorityCard ${item.tone}`} key={item.label} onClick={item.onClick}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              <small>{item.detail}</small>
-              <em>{item.action}</em>
-            </button>
-          ))}
-        </div>
-      </section>
 
       <div className={`dashboardLayout focus-${focusTab}`}>
         {showNotion && <section className="dashboardMainPanel">

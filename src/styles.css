@@ -784,35 +784,35 @@ a {
   order: 1;
 }
 
-.commandDashboard > .actionDashboardGrid {
+.commandDashboard > .dailyCommandBrief {
   order: 2;
 }
 
-.commandDashboard > .dailyCommandBrief {
+.commandDashboard > .priorityBoard {
   order: 3;
 }
 
-.commandDashboard > .priorityBoard {
+.commandDashboard > .dashboardFocusTabs {
   order: 4;
 }
 
-.commandDashboard > .knowledgeRoutingStrip {
+.commandDashboard > .dashboardLayout {
   order: 5;
 }
 
-.commandDashboard > .inboxActionPreview {
+.commandDashboard > .actionDashboardGrid {
   order: 6;
 }
 
-.commandDashboard > .shortTermReminderPanel {
+.commandDashboard > .knowledgeRoutingStrip {
   order: 7;
 }
 
-.commandDashboard > .dashboardFocusTabs {
+.commandDashboard > .inboxActionPreview {
   order: 8;
 }
 
-.commandDashboard > .dashboardLayout {
+.commandDashboard > .shortTermReminderPanel {
   order: 9;
 }
 
