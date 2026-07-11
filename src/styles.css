@@ -777,43 +777,43 @@ a {
 
 .commandDashboard {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .commandDashboard > .actionConsoleHero {
-  order: 8;
+  order: 20;
 }
 
 .commandDashboard > .dailyCommandBrief {
-  order: 1;
-}
-
-.commandDashboard > .priorityBoard {
   order: 2;
 }
 
-.commandDashboard > .dashboardFocusTabs {
+.commandDashboard > .priorityBoard {
   order: 3;
 }
 
-.commandDashboard > .dashboardLayout {
+.commandDashboard > .dashboardFocusTabs {
   order: 4;
 }
 
-.commandDashboard > .actionDashboardGrid {
-  order: 9;
-}
-
-.commandDashboard > .knowledgeRoutingStrip {
+.commandDashboard > .dashboardLayout {
   order: 5;
 }
 
+.commandDashboard > .actionDashboardGrid {
+  order: 21;
+}
+
+.commandDashboard > .knowledgeRoutingStrip {
+  order: 10;
+}
+
 .commandDashboard > .inboxActionPreview {
-  order: 6;
+  order: 11;
 }
 
 .commandDashboard > .shortTermReminderPanel {
-  order: 7;
+  order: 12;
 }
 
 .commandDashboard > .referenceDivider {
@@ -821,27 +821,28 @@ a {
 }
 
 .commandDashboard > .statusStrip {
-  order: 91;
+  order: 1;
 }
 
 .statusStrip {
   display: grid;
-  grid-template-columns: 1.25fr repeat(5, minmax(118px, 1fr));
+  grid-template-columns: 1.25fr repeat(5, minmax(126px, 1fr));
   gap: 1px;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(125, 211, 252, 0.2);
   border-radius: 8px;
-  background: var(--line);
+  background: rgba(125, 166, 217, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .statusStrip div {
-  min-height: 56px;
+  min-height: 64px;
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
   gap: 2px 9px;
   align-content: center;
   padding: 9px 12px;
-  background: rgba(8, 17, 32, 0.7);
+  background: linear-gradient(180deg, rgba(13, 30, 52, 0.92), rgba(7, 17, 31, 0.9));
 }
 
 .statusStrip svg {
@@ -864,26 +865,30 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #f8fbff;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .dailyCommandBrief {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  border-radius: 10px;
+  background: rgba(45, 212, 191, 0.12);
   align-items: stretch;
 }
 
 .briefHero,
 .briefActionList {
   min-width: 0;
-  padding: 16px;
-  border: 1px solid rgba(125, 211, 252, 0.18);
-  border-radius: 8px;
+  padding: 18px;
+  border: 0;
+  border-radius: 0;
   background:
-    linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(20, 184, 166, 0.08)),
+    linear-gradient(135deg, rgba(15, 118, 110, 0.3), rgba(8, 17, 32, 0.9)),
     rgba(8, 17, 32, 0.76);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: none;
 }
 
 .briefHero {
@@ -900,7 +905,7 @@ a {
 
 .briefHero strong {
   color: #f8fbff;
-  font-size: clamp(20px, 2vw, 30px);
+  font-size: clamp(22px, 2vw, 31px);
   line-height: 1.15;
 }
 
@@ -916,6 +921,7 @@ a {
   display: grid;
   gap: 8px;
   align-content: start;
+  background: rgba(4, 13, 24, 0.88);
 }
 
 .briefActionList p {
@@ -1009,11 +1015,11 @@ a {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px 10px;
-  min-height: 92px;
+  min-height: 98px;
   align-content: center;
   padding: 13px;
   border: 1px solid rgba(125, 166, 217, 0.18);
-  border-radius: 8px;
+  border-radius: 7px;
   background: rgba(6, 15, 28, 0.42);
   text-align: left;
 }
@@ -1043,7 +1049,7 @@ a {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .priorityCard em {
@@ -1084,7 +1090,7 @@ a {
   gap: 14px;
   padding: 14px 16px;
   border: 1px solid rgba(125, 211, 252, 0.22);
-  border-radius: 12px;
+  border-radius: 8px;
   background:
     linear-gradient(135deg, rgba(8, 27, 48, 0.9), rgba(5, 13, 25, 0.78)),
     radial-gradient(circle at 12% 0%, rgba(34, 211, 238, 0.2), transparent 36%);
@@ -1145,7 +1151,7 @@ a {
   min-width: 0;
   padding: 14px;
   border: 1px solid rgba(125, 166, 217, 0.18);
-  border-radius: 12px;
+  border-radius: 8px;
   background: rgba(5, 13, 25, 0.72);
 }
 
@@ -1345,7 +1351,7 @@ a {
 .statusStrip,
 .dashboardFocusTabs,
 .priorityBoard {
-  opacity: 0.78;
+  opacity: 1;
 }
 
 .actionEmpty {
@@ -1464,7 +1470,7 @@ a {
   display: grid;
   gap: 12px;
   min-width: 0;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
@@ -1475,6 +1481,7 @@ a {
 
 .dashboardMainPanel {
   min-height: 0;
+  border-color: rgba(125, 211, 252, 0.26);
 }
 
 .dashboardSidePanel {
@@ -1733,8 +1740,8 @@ a {
 
 .sourceOverviewGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 8px;
   background: transparent;
   border-color: transparent;
 }
@@ -1743,8 +1750,8 @@ a {
   display: grid;
   gap: 10px;
   align-content: start;
-  min-height: 154px;
-  padding: 14px;
+  min-height: 166px;
+  padding: 15px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   background:
@@ -1791,13 +1798,20 @@ a {
 
 .sourceOverviewCard ul {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   margin: 0;
   padding-left: 17px;
 }
 
 .sourceOverviewCard p {
   margin: 0;
+}
+
+.sourceOverviewCard li {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .sourceRecentLine {
@@ -5782,6 +5796,7 @@ body {
   display: grid;
   gap: 12px;
   align-content: start;
+  min-height: 0;
 }
 
 .calendarMiniPanel,
@@ -6413,7 +6428,6 @@ body {
   .actionDashboardGrid,
   .knowledgeRoutingStrip,
   .inboxRoutingSummary,
-  .dashboardFocusTabs,
   .priorityBoard,
   .priorityCards,
   .attentionPanel,
@@ -6428,11 +6442,32 @@ body {
   }
 
   .dashboardFocusTabs {
-    width: 100%;
+    display: flex;
+    width: calc(100% + 28px);
+    margin-left: -14px;
+    padding: 5px 14px;
+    overflow-x: auto;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    scrollbar-width: none;
+  }
+
+  .dashboardFocusTabs::-webkit-scrollbar {
+    display: none;
   }
 
   .dashboardFocusTabs button {
-    min-width: 0;
+    min-width: 82px;
+    flex: 0 0 auto;
+  }
+
+  .statusStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statusStrip div:first-child {
+    grid-column: 1 / -1;
   }
 
   .priorityCard {

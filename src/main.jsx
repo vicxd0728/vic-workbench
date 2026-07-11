@@ -1245,7 +1245,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
   const showNotionDetail = focusTab === 'notion';
   const showNews = focusTab === 'news';
   const showDevice = focusTab === 'device';
-  const showErp = focusTab === 'overview' || focusTab === 'erp';
+  const showErp = focusTab === 'erp';
   const briefHighlights = displayedSummaryHighlights.slice(0, 3);
   const nextStepItems = [
     erpData?.overdue > 0 ? `ERP 有 ${erpData.overdue} 件交期逾期，先確認可出貨與需改期項目。` : null,
@@ -1298,9 +1298,9 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
     <section className="commandDashboard">
       <div className="actionConsoleHero">
         <div>
-          <span>今日行動中控台</span>
-          <h2>先處理會推動結果的事</h2>
-          <p>任務、本週追蹤與知識分流排在最前面；連結、歷史與完整清單移到後段參考區。</p>
+          <span>待接通的行動工具</span>
+          <h2>任務與追蹤</h2>
+          <p>等任務、專案與收件匣資料穩定同步後，這裡會成為每日工作的操作區。</p>
         </div>
         <button type="button" onClick={() => setActiveView('inbox')}><Inbox size={16} />整理收件匣</button>
       </div>
@@ -1360,7 +1360,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
 
       <section className="dailyCommandBrief">
         <div className="briefHero">
-          <span>今日中控</span>
+          <span>即時決策摘要</span>
           <strong>{attentionItems.length ? '有訊號需要先看' : '目前沒有明顯警訊'}</strong>
           <p>{briefHighlights[0] || newestItem?.summary || 'Notion、ERP、新聞與行事曆會在這裡整理成可快速判斷的重點。'}</p>
         </div>
@@ -1529,7 +1529,7 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
                 ) : (
                   <p>{source.status === 'loading' ? '正在讀取最新資料...' : '尚未產生重點摘要。'}</p>
                 )}
-                {source.recentItems.length > 1 && (
+                {showNotionDetail && source.recentItems.length > 1 && (
                   <div className="sourceRecentLine">
                     {source.recentItems.slice(1).map((item) => (
                       <span key={item.id} onClick={(event) => {
@@ -1550,32 +1550,6 @@ function DashboardOverview({ stats, tasks, notes, projects, setActiveView, notio
 
         {focusTab === 'overview' && <aside className="dashboardSidePanel dashboardStackPanel">
           <CalendarMiniAgenda calendarData={calendarData} setActiveView={setActiveView} />
-          <div className="serviceHealthPanel">
-          <div className="dashboardPanelHeader compact">
-            <div><h2>服務狀態</h2><span>常用系統入口與連線概況</span></div>
-            <button type="button" onClick={() => setActiveView('links')}>全部連結 <ChevronRight size={15} /></button>
-          </div>
-          <div className="serviceHealthList">
-            {serviceHealthCards.map((service) => (
-              <a href={service.url} target="_blank" rel="noreferrer" key={service.id}>
-                <span className="serviceDot online" />
-                <div>
-                  <strong>{service.label}</strong>
-                  <small>{service.detail}</small>
-                </div>
-                <em>{service.status}</em>
-              </a>
-            ))}
-            <button type="button" onClick={() => setFocusTab('device')} className="serviceDeviceRow">
-              <span className={`serviceDot ${deviceOnline ? 'online' : 'muted'}`} />
-              <div>
-                <strong>本機代理程式</strong>
-                <small>{deviceOnline ? '可接收遠端指令' : '等待狀態回報'}</small>
-              </div>
-              <em>{deviceOnline ? '正常' : '待確認'}</em>
-            </button>
-          </div>
-          </div>
         </aside>}
 
         {showDevice && <aside className="dashboardSidePanel">
